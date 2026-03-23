@@ -1,0 +1,21 @@
+# ==============================================================================
+# SPOKE HUB - CROWDSEC OVERLAY
+# ==============================================================================
+# Description: Adds CrowdSec dependency and startup ordering to Traefik.
+#              Applied by the Makefile when CROWDSEC_ENABLED=true.
+#              The depends_on entry activates the crowdsec profile service.
+# Author: Matt Barham
+# Created: 2026-03-15
+# Version: 1.0.0
+# ==============================================================================
+# Usage: Applied automatically via Makefile HUB_COMPOSE_FILES when
+#        CROWDSEC_ENABLED=true. Do not apply manually unless CrowdSec is ready.
+# ==============================================================================
+
+name: spoke-hub
+
+services:
+  traefik:
+    depends_on:
+      crowdsec:
+        condition: service_healthy

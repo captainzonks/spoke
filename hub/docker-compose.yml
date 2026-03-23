@@ -1,0 +1,759 @@
+# ==============================================================================
+# SPOKE HUB - DOCKER COMPOSE
+# ==============================================================================
+# Description: Core hub services - proxy, auth, security, database, cache
+# Author: Matt Barham
+# Created: 2026-02-12
+# Version: 1.0.0
+# ==============================================================================
+# Services: socket-proxy, traefik, authentik, authentik-worker,
+#           crowdsec, postgres-hub, redis, sablier
+# Config Sources: shared/env/base.env + shared/env/hub.env
+# Security: non-root (UID:PUID/GID:DGID), secrets via /run/secrets/, caps dropped
+# ==============================================================================
+# Container Images:
+#   See shared/env/hub.env for complete image paths and versions
+# Networks:
+#   - soxy (192.168.33.0/24) - socket proxy isolated network
+#   - troxy (192.168.35.0/24) - main application network
+#   - auxy (192.168.38.0/24) - authentik auxiliary network
+# ==============================================================================
+
+name: spoke-hub
+
+############################ EXTENSIONS
+
+x-ssl: &ssl
+  environment:
+    - SSL_CERT_FILE=${SSL_CERT_FILE}
+    - REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE}
+    - CURL_CA_BUNDLE=${CURL_CA_BUNDLE}
+
+  volumes:
+    - ${CA_CERT}:/etc/ssl/certs/ca-certificates.crt:ro
+
+x-logging-important: &log
+  logging:
+    driver: json-file
+    options:
+      max-size: 50m
+      max-file: "3"
+
+x-logging-small: &log_small
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "2"
+
+############################ NETWORKS
+
+networks:
+  troxy:
+    external: true
+  soxy:
+    external: true
+  auxy:
+    external: true
+
+############################# SECRETS
+
+secrets:
+  # PostgreSQL
+  postgres_password:
+    file: ${SECRETS_DIR}/postgres/postgres_password
+
+  # Authentik
+  authentik_psql_password:
+    file: ${SECRETS_DIR}/postgres/authentik_psql_password
+  authentik_secret_key:
+    file: ${SECRETS_DIR}/authentik/authentik_secret_key
+
+  # Traefik
+  basic_auth_credentials:
+    file: ${SECRETS_DIR}/traefik/basic_auth_credentials
+
+  # CrowdSec
+  crowdsec_lapi_key:
+    file: ${SECRETS_DIR}/crowdsec/crowdsec_lapi_key
+  crowdsec_online_api_login:
+    file: ${SECRETS_DIR}/crowdsec/crowdsec_online_api_login
+  crowdsec_online_api_password:
+    file: ${SECRETS_DIR}/crowdsec/crowdsec_online_api_password
+
+  # TLS certificates — one pair per domain served by this instance
+  # Deployers: rename/symlink actual cert files to match these paths
+  domain_1_cert:
+    file: ${SECRETS_DIR}/tls/domain_1.pem
+  domain_1_key:
+    file: ${SECRETS_DIR}/tls/domain_1.key
+  domain_2_cert:
+    file: ${SECRETS_DIR}/tls/domain_2.pem
+  domain_2_key:
+    file: ${SECRETS_DIR}/tls/domain_2.key
+  domain_3_cert:
+    file: ${SECRETS_DIR}/tls/domain_3.pem
+  domain_3_key:
+    file: ${SECRETS_DIR}/tls/domain_3.key
+
+  # Authenticated origin pulls CA (optional — e.g. Cloudflare)
+  origin_pull_ca:
+    file: ${SECRETS_DIR}/tls/origin_pull_ca.pem
+
+############################# SERVICES
+
+services:
+  #======================================
+  # SOCKET PROXY - Docker Socket Access
+  #======================================
+  socket-proxy:
+    <<: [*ssl, *log]
+    image: ${SOCKET_PROXY_IMAGE}
+    hostname: socket-proxy
+    container_name: socket-proxy
+    restart: on-failure
+    init: true
+
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    mem_limit: 64M
+    cpus: 0.25
+    cap_drop:
+      - ALL
+    user: 65534:${DGID}
+
+    networks:
+      soxy:
+        ipv4_address: ${SPROXY_IP}
+
+    healthcheck:
+      test: ["CMD", "./healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=${DOMAIN}
+      - SP_LOGLEVEL=INFO
+      - SPROXY_IP=${SPROXY_IP}
+      - SP_PROXYPORT=${SPROXY_PORT}
+      - SP_ALLOWFROM=${SP_ALLOWFROM}
+      - SP_LISTENIP=0.0.0.0
+      - SP_SOCKETPATH=/var/run/docker.sock
+      - SP_ALLOWHEALTHCHECK=true
+      - SP_SHUTDOWNGRACETIME=5
+      - SP_WATCHDOGINTERVAL=600
+      - SP_STOPONWATCHDOG=true
+      - SP_ALLOW_GET=${SP_ALLOW_GET}
+      - SP_ALLOW_HEAD=${SP_ALLOW_HEAD}
+      - SP_ALLOW_POST=${SP_ALLOW_POST}
+      - SP_ALLOW_PUT=${SP_ALLOW_PUT}
+      - SP_ALLOW_DELETE=${SP_ALLOW_DELETE}
+      - SP_ALLOW_CONNECT=NONE
+      - SP_ALLOW_TRACE=NONE
+      - SP_ALLOW_OPTIONS=NONE
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${LOCALTIME}:/etc/localtime:ro
+
+    tmpfs:
+      - /tmp/:rw,size=50m
+      - /run/:rw,size=25m
+
+  #======================================
+  # POSTGRES - Shared Database
+  #======================================
+  postgres-hub:
+    <<: [*ssl, *log_small]
+    image: ${POSTGRES_IMAGE}
+    build:
+      context: ${SPOKE_DIR}/dockerfiles/postgres/
+      dockerfile: ${SPOKE_DIR}/dockerfiles/postgres/Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE}
+        CT_TAG: ${POSTGRES_TAG}
+        USER_ID: ${PUID}
+        GROUP_ID: ${DGID}
+        USERNAME: postgres
+        GROUPNAME: postgres
+        OG_UID: 999
+        OG_GID: 999
+      x-bake:
+        tags:
+          - postgres:${POSTGRES_TAG}
+
+    hostname: postgres-hub
+    container_name: postgres-hub
+    restart: on-failure
+
+    security_opt:
+      - no-new-privileges=true
+    mem_limit: 2G
+    cpus: 2.0
+    cap_drop:
+      - ALL
+    user: ${PUID}:${DGID}
+
+    networks:
+      troxy:
+        ipv4_address: ${POSTGRES_IP}
+
+    ports:
+      - ${POSTGRES_PORT}:5432
+
+    depends_on:
+      socket-proxy:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+
+    command:
+      - -c
+      - max_connections=300
+      - -c
+      - shared_buffers=512MB
+
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=${DOMAIN}
+      - POSTGRES_IP=${POSTGRES_IP}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
+    volumes:
+      - ${APPDATA_DIR}/postgres-hub/tablespaces/:/data/tablespaces/:rw
+      - ${APPDATA_DIR}/postgres-hub/:/var/lib/postgresql/:rw
+      - ${LOCALTIME}:/etc/localtime:ro
+
+    tmpfs:
+      - /tmp/:rw,size=500m
+      - /dev/shm/:rw,size=1g
+
+    secrets:
+      - postgres_password
+
+  #======================================
+  # REDIS - Caching and Session Storage
+  #======================================
+  redis:
+    <<: [*ssl, *log]
+    image: ${REDIS_IMAGE}
+    hostname: redis
+    container_name: redis
+    restart: on-failure
+    init: true
+
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    mem_limit: 1G
+    cpus: 1.0
+    cap_drop:
+      - ALL
+    user: ${PUID}:${DGID}
+
+    networks:
+      auxy:
+        ipv4_address: ${REDIS_IP_A}
+      troxy:
+        ipv4_address: ${REDIS_IP_T}
+
+    ports:
+      - ${REDIS_PORT}:6379
+
+    depends_on:
+      socket-proxy:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+    command:
+      - redis-server
+      - --maxmemory
+      - 800mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - "900"
+      - "1"
+      - --save
+      - "300"
+      - "10"
+      - --save
+      - "60"
+      - "10000"
+      - --loglevel
+      - notice
+      - --tcp-keepalive
+      - "300"
+      - --timeout
+      - "0"
+      - --databases
+      - "16"
+
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=${DOMAIN}
+      - REDIS_IP_A=${REDIS_IP_A}
+      - REDIS_IP_T=${REDIS_IP_T}
+      - REDIS_PORT=${REDIS_PORT}
+
+    volumes:
+      - ${APPDATA_DIR}/redis/data/:/data/:rw
+      - ${LOCALTIME}:/etc/localtime:ro
+
+    tmpfs:
+      - /tmp/:rw,size=200m
+      - /run/:rw,size=50m
+      - /dev/shm/:rw,size=1g
+
+  #======================================
+  # CROWDSEC - Security IPS
+  #======================================
+  crowdsec:
+    profiles:
+      - crowdsec
+    <<: [*ssl, *log]
+    image: ${CROWDSEC_IMAGE}
+    build:
+      context: ${SPOKE_DIR}/dockerfiles/crowdsec/
+      dockerfile: ${SPOKE_DIR}/dockerfiles/crowdsec/Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE}
+        CT_TAG: ${CROWDSEC_TAG}
+        USER_ID: ${PUID}
+        GROUP_ID: ${DGID}
+        USERNAME: crowdsec
+        GROUPNAME: crowdsec
+      x-bake:
+        tags:
+          - crowdsec:${CROWDSEC_TAG}
+
+    hostname: crowdsec
+    container_name: crowdsec
+    restart: on-failure
+    init: true
+
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    mem_limit: 512M
+    cpus: 1.0
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+    user: ${PUID}:${DGID}
+
+    networks:
+      soxy:
+        ipv4_address: ${CROWDSEC_IP_S}
+      troxy:
+        ipv4_address: ${CROWDSEC_IP_T}
+
+    ports:
+      - ${CROWDSEC_PORT}:8080
+      - ${CROWDSEC_METRICS_PORT}:6069
+      - ${CROWDSEC_APPSEC_PORT}:7422
+
+    depends_on:
+      postgres-hub:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=${DOMAIN}
+      - COLLECTIONS=${CROWDSEC_COLLECTIONS}
+      - DOCKER_HOST=${SPROXY}
+      - CROWDSEC_IP=${CROWDSEC_IP_T}
+      - CROWDSEC_PORT=${CROWDSEC_PORT}
+      - GIN_MODE=release
+      - METRICS_PORT=${CROWDSEC_METRICS_PORT}
+      - CUSTOM_HOSTNAME=${INSTANCE_NAME}
+      - CDN_IPS=${CDN_IPS}
+      - LOCAL_IPS=${LOCAL_IPS}
+      - CROWDSEC_PSQL_USER=${CROWDSEC_PSQL_USER}
+      - CROWDSEC_PSQL_PASSWORD=${CROWDSEC_PSQL_PASSWORD}
+      - CROWDSEC_PSQL_DB=${CROWDSEC_PSQL_DB}
+      - POSTGRES_IP=${POSTGRES_IP}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - TRAEFIK_IP_T=${TRAEFIK_IP_T}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - SERVICES_EMAIL=${SERVICES_EMAIL}
+      - CROWDSEC_LAPI_KEY=/run/secrets/crowdsec_lapi_key
+      - CROWDSEC_LOCAL_API_CREDENTIALS=/etc/crowdsec/credentials/local_api_credentials.yaml
+      - CROWDSEC_ONLINE_API_CREDENTIALS=/etc/crowdsec/credentials/online_api_credentials.yaml
+
+    volumes:
+      - ${APPDATA_DIR}/crowdsec/config/:/etc/crowdsec/:rw
+      - ${APPDATA_DIR}/crowdsec/data/:/var/lib/crowdsec/data/:rw
+      - /var/log/:/var/log/host/:ro
+      - ${LOCALTIME}:/etc/localtime:ro
+
+    tmpfs:
+      - /tmp/:rw,size=200m
+      - /run/:rw,size=100m
+      - /dev/shm/:rw,size=256m
+
+    secrets:
+      - crowdsec_lapi_key
+
+  #======================================
+  # TRAEFIK - Reverse Proxy
+  #======================================
+  traefik:
+    <<: [*ssl, *log]
+    image: ${TRAEFIK_IMAGE}
+    build:
+      context: ${SPOKE_DIR}/dockerfiles/traefik/
+      dockerfile: ${SPOKE_DIR}/dockerfiles/traefik/Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE}
+        CT_TAG: ${TRAEFIK_TAG}
+        USER_ID: ${PUID}
+        GROUP_ID: ${DGID}
+        USERNAME: traefik
+        GROUPNAME: traefik
+      x-bake:
+        tags:
+          - traefik:${TRAEFIK_TAG}
+
+    hostname: traefik
+    container_name: traefik
+    restart: on-failure
+    init: true
+
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    mem_limit: 512M
+    cpus: 1.5
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN
+      - NET_BIND_SERVICE
+    user: ${PUID}:${DGID}
+
+    networks:
+      soxy:
+        ipv4_address: ${TRAEFIK_IP_S}
+      troxy:
+        ipv4_address: ${TRAEFIK_IP_T}
+
+    ports:
+      - 80:80/tcp
+      - 443:443/tcp
+      - 8081:8081/tcp
+      - 8082:8082/tcp
+
+    healthcheck:
+      test: ["CMD-SHELL", "/traefik-healthcheck.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
+
+    command:
+      ### GLOBAL
+      - --global.checkNewVersion=true
+      - --global.sendAnonymousUsage=false
+
+      ### ENTRYPOINTS
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+      - --entryPoints.websecure.http3.advertisedport=443
+      - --entryPoints.ping.address=:8081
+      - --entryPoints.metrics.address=:8082
+
+      - --entryPoints.web.http.redirections.entryPoint.to=websecure
+      - --entryPoints.web.http.redirections.entryPoint.scheme=https
+      - --entryPoints.web.http.redirections.entryPoint.permanent=true
+      - --entryPoints.web.forwardedHeaders.trustedIPs=${CDN_IPS},${LOCAL_IPS}
+      - --entryPoints.websecure.forwardedHeaders.trustedIPs=${CDN_IPS},${LOCAL_IPS}
+      - --entryPoints.websecure.http.tls=true
+      - --entryPoints.websecure.http.tls.options=tls-opts@file
+      - --entryPoints.websecure.transport.respondingTimeouts.readTimeout=0
+      - --entryPoints.websecure.transport.respondingTimeouts.writeTimeout=0
+      - --entryPoints.websecure.transport.respondingTimeouts.idleTimeout=600s
+
+      ### DASHBOARD
+      - --api=true
+      - --api.dashboard=true
+      - --api.debug=false
+
+      ### PING
+      - --ping=true
+      - --ping.entryPoint=ping
+
+      ### METRICS
+      - --metrics.addinternals
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entryPoint=metrics
+
+      ### PROVIDERS
+      # Docker
+      - --providers.docker=true
+      - --providers.docker.endpoint=${SPROXY}
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=troxy
+      - --providers.docker.watch=true
+      - --providers.docker.defaultRule=Host(`{{ .Name }}.{{ env "DOMAIN" }}`)
+
+      # Redis
+      - --providers.redis.endpoints=redis:${REDIS_PORT}
+      - --providers.redis.rootkey=traefik
+
+      # Files
+      - --providers.file.directory=/etc/traefik/rules/
+      - --providers.file.watch=true
+
+      ### LOG
+      - --log=true
+      - --log.level=INFO
+
+      ### ACCESS LOG
+      - --accessLog=true
+      - --accessLog.bufferingSize=100
+
+      ### PLUGINS
+      # CrowdSec Bouncer
+      - --experimental.plugins.crowdsec-bouncer-traefik-plugin.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      - --experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.5.0-beta1
+      # Header Transformation
+      - --experimental.plugins.htransformation.modulename=github.com/tomMoulard/htransformation
+      - --experimental.plugins.htransformation.version=v0.3.3
+      # Sablier (on-demand container start/stop)
+      - --experimental.plugins.sablier.modulename=github.com/sablierapp/sablier-traefik-plugin
+      - --experimental.plugins.sablier.version=v1.1.0
+
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=${DOMAIN}
+      - CDN_IPS=${CDN_IPS}
+      - LOCAL_IPS=${LOCAL_IPS}
+      - CROWDSEC_ENABLED=${CROWDSEC_ENABLED}
+      - TLS_DOMAIN_1_CERT_FILE=/run/secrets/domain_1_cert
+      - TLS_DOMAIN_1_KEY_FILE=/run/secrets/domain_1_key
+      - TLS_DOMAIN_2_CERT_FILE=/run/secrets/domain_2_cert
+      - TLS_DOMAIN_2_KEY_FILE=/run/secrets/domain_2_key
+      - TLS_DOMAIN_3_CERT_FILE=/run/secrets/domain_3_cert
+      - TLS_DOMAIN_3_KEY_FILE=/run/secrets/domain_3_key
+      - TLS_CLIENT_CA_FILE=/run/secrets/origin_pull_ca
+
+    volumes:
+      - ${SPOKE_DIR}/appdata/traefik/rules/:/etc/traefik/rules/:ro
+      - ${APPDATA_DIR}/traefik/plugins-storage/:/plugins-storage/:rw
+      - ${LOCALTIME}:/etc/localtime:ro
+
+    tmpfs:
+      - /tmp/:rw,size=1g
+      - /run/:rw,size=100m
+      - /dev/shm/:rw,size=256m
+
+    secrets:
+      - basic_auth_credentials
+      - crowdsec_lapi_key
+      - domain_1_cert
+      - domain_1_key
+      - domain_2_cert
+      - domain_2_key
+      - domain_3_cert
+      - domain_3_key
+      - origin_pull_ca
+
+  #======================================
+  # AUTHENTIK - Authentication Provider
+  #======================================
+  authentik:
+    <<: [*ssl, *log]
+    image: ${AUTHENTIK_IMAGE}
+    hostname: authentik
+    container_name: authentik
+    restart: on-failure
+    init: true
+
+    security_opt:
+      - no-new-privileges=true
+    mem_limit: 1G
+    cpus: 1.0
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    user: ${PUID}:${DGID}
+
+    networks:
+      auxy:
+        ipv4_address: ${AUTH_IP_A}
+      troxy:
+        ipv4_address: ${AUTH_IP_T}
+
+    ports:
+      - ${AUTH_PORT_HTTP}:9000
+      - ${AUTH_PORT_HTTPS}:9443
+
+    command:
+      - server
+
+    environment: &auth_env
+      - TZ=${TZ}
+      - DOMAIN=${DOMAIN}
+      - DOCKER_HOST=${SPROXY}
+      - AUTH_IP_A=${AUTH_IP_A}
+      - AUTH_IP_T=${AUTH_IP_T}
+      - AUTH_IP_W_A=${AUTH_IP_W_A}
+      - AUTH_IP_W_S=${AUTH_IP_W_S}
+      - AUTH_IP_W_T=${AUTH_IP_W_T}
+      - AUTH_PORT_HTTP=${AUTH_PORT_HTTP}
+      - AUTH_PORT_HTTPS=${AUTH_PORT_HTTPS}
+      - AUTHENTIK_POSTGRESQL__HOST=${AUTHENTIK_POSTGRESQL__HOST}
+      - AUTHENTIK_POSTGRESQL__NAME=${AUTHENTIK_POSTGRESQL__NAME}
+      - AUTHENTIK_POSTGRESQL__USER=${AUTHENTIK_POSTGRESQL__USER}
+      - AUTHENTIK_POSTGRESQL__PASSWORD=file:///run/secrets/authentik_psql_password
+      - AUTHENTIK_EMAIL__HOST=${AUTHENTIK_EMAIL__HOST}
+      - AUTHENTIK_EMAIL__PORT=${AUTHENTIK_EMAIL__PORT}
+      - AUTHENTIK_EMAIL__USERNAME=${ADMIN_EMAIL}
+      - AUTHENTIK_EMAIL__USE_TLS=${AUTHENTIK_EMAIL__USE_TLS}
+      - AUTHENTIK_EMAIL__USE_SSL=${AUTHENTIK_EMAIL__USE_SSL}
+      - AUTHENTIK_EMAIL__TIMEOUT=${AUTHENTIK_EMAIL__TIMEOUT}
+      - AUTHENTIK_EMAIL__FROM=${SERVICES_EMAIL}
+      - AUTHENTIK_SECRET_KEY=file:///run/secrets/authentik_secret_key
+      - AUTHENTIK_LOG_LEVEL=info
+      - AUTHENTIK_DISABLE_STARTUP_ANALYTICS=false
+      - AUTHENTIK_DISABLE_UPDATE_CHECK=false
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=true
+      - UV_CACHE_DIR=/tmp/uv_cache
+      - XDG_CACHE_HOME=/tmp/.cache
+      - VENV_PATH=/tmp/.venv
+      - UV_PROJECT_ENVIRONMENT=/tmp/.venv
+
+    volumes: &auth_vol
+      - ${APPDATA_DIR}/authentik/data/:/data/:rw
+      - ${APPDATA_DIR}/authentik/custom-templates/:/templates/:rw
+      - ${LOCALTIME}:/etc/localtime:ro
+
+    tmpfs:
+      - /tmp/:rw,size=200m
+      - /run/:rw,size=100m
+      - /dev/shm/:rw,size=512m
+
+    secrets: &auth_secrets
+      - authentik_psql_password
+      - authentik_secret_key
+
+  #======================================
+  # AUTHENTIK WORKER - Background Tasks
+  #======================================
+  authentik-worker:
+    <<: [*ssl, *log]
+    image: ${AUTHENTIK_IMAGE}
+    hostname: authentik-worker
+    container_name: authentik-worker
+    restart: on-failure
+    init: true
+
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    mem_limit: 1G
+    cpus: 0.75
+    cap_drop:
+      - ALL
+    user: ${PUID}:${DGID}
+
+    networks:
+      auxy:
+        ipv4_address: ${AUTH_IP_W_A}
+      soxy:
+        ipv4_address: ${AUTH_IP_W_S}
+      troxy:
+        ipv4_address: ${AUTH_IP_W_T}
+
+    depends_on:
+      authentik:
+        condition: service_healthy
+
+    command:
+      - worker
+
+    environment: *auth_env
+
+    volumes: *auth_vol
+
+    tmpfs:
+      - /tmp/:rw,size=200m
+      - /run/:rw,size=50m
+      - /dev/shm/:rw,size=512m
+
+    secrets: *auth_secrets
+
+  #======================================
+  # SABLIER - On-Demand Container Manager
+  #======================================
+  sablier:
+    <<: [*ssl, *log_small]
+    image: sablierapp/sablier:1.11.1
+    hostname: sablier
+    container_name: sablier
+    restart: on-failure
+
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    mem_limit: 64M
+    cpus: 0.25
+    cap_drop:
+      - ALL
+
+    networks:
+      soxy:
+        ipv4_address: ${SABLIER_IP_S}
+      troxy:
+        ipv4_address: ${SABLIER_IP_T}
+
+    depends_on:
+      socket-proxy:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "sablier", "health", "--url", "http://127.0.0.1:10000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    command:
+      - start
+      - --provider.name=docker
+
+    environment:
+      - TZ=${TZ}
+      - DOCKER_HOST=tcp://${SPROXY_IP}:${SPROXY_PORT}
+
+    tmpfs:
+      - /tmp/:rw,size=10m

@@ -1,0 +1,24 @@
+[Unit]
+Description=Update DuckDNS DDNS record with current public IP
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# TODO: Edit User, Group, and ExecStart path for your installation
+User=your-user
+Group=docker
+ExecStart=/path/to/spoke/scripts/maintenance/update_duckdns.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=duckdns-updater
+
+# Security settings
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

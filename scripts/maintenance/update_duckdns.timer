@@ -1,0 +1,10 @@
+[Unit]
+Description=Update DuckDNS DDNS record every 10 minutes
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,24 @@
+[Unit]
+Description=CrowdSec Weekly Threat Summary Email
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# TODO: Edit User, Group, and ExecStart path for your installation
+User=your-user
+Group=docker
+ExecStart=/path/to/spoke/scripts/maintenance/crowdsec_weekly_summary.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crowdsec-weekly-summary
+
+# Security settings
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

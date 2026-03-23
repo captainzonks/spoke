@@ -1,0 +1,24 @@
+[Unit]
+Description=Portfolio Database Cleanup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# TODO: Edit User and ExecStart path for your installation
+User=your-user
+Group=docker
+ExecStart=/path/to/spoke/scripts/maintenance/portfolio_cleanup.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=portfolio-cleanup
+
+# Security settings
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

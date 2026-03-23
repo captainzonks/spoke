@@ -1,0 +1,19 @@
+[Unit]
+Description=Spoke Platform - Ordered Boot Deployment
+Documentation=https://github.com/captainzonks/spoke
+
+# default.target ensures user session is ready; Docker should be running by then
+# The boot script polls for Docker readiness as a safety net
+After=default.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/path/to/spoke/scripts/maintenance/boot_deploy.sh
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spoke-boot-deploy
+
+[Install]
+WantedBy=default.target

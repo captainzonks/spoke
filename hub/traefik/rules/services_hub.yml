@@ -1,0 +1,36 @@
+# ==============================================================================
+# SERVICES_HUB - TRAEFIK HUB SERVICE DEFINITIONS
+# ==============================================================================
+# Description: Load balancer service configurations for hub services
+# Author: Matt Barham
+# Created: 2026-02-15
+# Version: 1.0.0
+# ==============================================================================
+# Security Level: MEDIUM
+# Contains Secrets: NO
+# ==============================================================================
+# Related Documentation:
+#   - Traefik Services: https://doc.traefik.io/traefik/routing/services/
+# Dependencies:
+#   - Hub services must be running and accessible on troxy network
+# ==============================================================================
+
+http:
+  services:
+    #======================================================
+    #==================== TRAEFIK ========================
+    #======================================================
+
+    dummy-svc:
+      loadBalancer:
+        servers:
+          - url: http://traefik:80
+
+    #======================================================
+    #==================== AUTHENTIK ======================
+    #======================================================
+
+    authentik-server-svc:
+      loadBalancer:
+        servers:
+          - url: http://authentik:9000

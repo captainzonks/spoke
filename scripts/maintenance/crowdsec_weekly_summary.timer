@@ -1,0 +1,11 @@
+[Unit]
+Description=CrowdSec Weekly Threat Summary Timer
+
+[Timer]
+# Run every Sunday at 8:00 PM
+OnCalendar=Sun 20:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,389 @@
+# ==============================================================================
+# SPOKE HUB - TRAEFIK MIDDLEWARE CONFIGURATION
+# ==============================================================================
+# Description: Reusable middleware chains and components for the Spoke platform
+# Author: Matt Barham
+# Created: 2026-02-12
+# Version: 1.0.0
+# ==============================================================================
+# Note: Module-specific middleware should be defined in module traefik/ dirs
+# ==============================================================================
+
+http:
+  middlewares:
+    #======================================================
+    #==================== CHAINS =========================
+    #======================================================
+
+    chain-no-auth:
+      chain:
+        middlewares:
+          - rate-limit
+          - secure-headers
+          - real-ip
+          - crowdsec
+
+    chain-basic-auth:
+      chain:
+        middlewares:
+          - rate-limit
+          - secure-headers
+          - real-ip
+          - crowdsec
+          - basic-auth
+
+    chain-authentik:
+      chain:
+        middlewares:
+          - rate-limit
+          - secure-headers
+          - real-ip
+          - crowdsec
+          - authentik
+
+    chain-admin-strict:
+      chain:
+        middlewares:
+          - rate-limit-strict
+          - secure-headers
+          - real-ip
+          - crowdsec
+          - authentik
+
+    chain-media:
+      chain:
+        middlewares:
+          - rate-limit-media
+          - secure-headers
+          - real-ip
+          - crowdsec
+
+    chain-media-auth:
+      chain:
+        middlewares:
+          - rate-limit-media
+          - secure-headers
+          - real-ip
+          - crowdsec
+          - authentik
+
+    chain-monitoring:
+      chain:
+        middlewares:
+          - rate-limit-monitoring
+          - secure-headers
+          - real-ip
+          - crowdsec
+
+    chain-api:
+      chain:
+        middlewares:
+          - rate-limit-api
+          - secure-headers
+          - real-ip
+          - crowdsec
+
+    chain-public:
+      chain:
+        middlewares:
+          - rate-limit-public
+          - secure-headers
+          - real-ip
+          - crowdsec
+
+    chain-websocket:
+      chain:
+        middlewares:
+          - secure-headers
+          - real-ip
+          - crowdsec
+
+    chain-static-assets:
+      chain:
+        middlewares:
+          - rate-limit-static
+          - secure-headers
+          - real-ip
+
+    chain-upload:
+      chain:
+        middlewares:
+          - rate-limit-media
+          - secure-headers
+          - real-ip
+          - crowdsec-upload
+
+    chain-authentik-no-crowdsec:
+      chain:
+        middlewares:
+          - rate-limit
+          - secure-headers
+          - real-ip
+          - authentik
+
+    chain-authentik-cors:
+      chain:
+        middlewares:
+          - rate-limit
+          - authentik-cors
+          - authentik-server-headers
+          - real-ip
+          # No crowdsec or authentik - this is the auth provider itself
+
+    #======================================================
+    #==================== MIDDLEWARE COMPONENTS ==========
+    #======================================================
+
+    #==================== REAL IP DETECTION =============
+
+    real-ip:
+      plugin:
+        htransformation:
+          Rules:
+            - Rule:
+              Name: "Clear Real IP"
+              Header: "X-Real-Ip"
+              Value: ""
+              Type: "Set"
+            - Rule:
+              Name: "Join Real IP"
+              Header: "X-Real-Ip"
+              HeaderPrefix: "^"
+              Sep: " "
+              Values:
+                - "^Cf-Connecting-Ip"
+              Type: "Join"
+
+    #==================== AUTHENTICATION =================
+
+    basic-auth:
+      basicAuth:
+        usersFile: '{{ env "HTPASSWD_FILE" }}'
+        realm: "Spoke"
+
+    authentik:
+      forwardAuth:
+        address: "http://authentik:9000/outpost.goauthentik.io/auth/traefik"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-authentik-username
+          - X-authentik-groups
+          - X-authentik-entitlements
+          - X-authentik-email
+          - X-authentik-name
+          - X-authentik-uid
+          - X-authentik-jwt
+          - X-authentik-meta-jwks
+          - X-authentik-meta-outpost
+          - X-authentik-meta-provider
+          - X-authentik-meta-app
+          - X-authentik-meta-version
+          - Authorization
+        authResponseHeadersRegex: "^X-authentik-.*$"
+
+    authentik-server-headers:
+      headers:
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        customFrameOptionsValue: SAMEORIGIN
+        contentTypeNosniff: false
+        browserXssFilter: true
+        referrerPolicy: "no-referrer-when-downgrade"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=()"
+        customResponseHeaders:
+          X-Robots-Tag: "none,noarchive,nosnippet,notranslate,noimageindex,"
+          server: ""
+
+    #==================== CORS CONFIGURATIONS ============
+
+    authentik-cors:
+      headers:
+        accessControlAllowOriginList:
+          - "null"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "Accept"
+          - "Origin"
+          - "Referer"
+        accessControlExposeHeaders:
+          - "Location"
+          - "Content-Type"
+        accessControlMaxAge: 3600
+        addVaryHeader: true
+        accessControlAllowCredentials: true
+
+    #==================== RATE LIMITING ==================
+
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+
+    rate-limit-media:
+      rateLimit:
+        average: 500
+        burst: 100
+        period: 1m
+
+    rate-limit-monitoring:
+      rateLimit:
+        average: 1000
+        burst: 500
+        period: 1m
+
+    rate-limit-strict:
+      rateLimit:
+        average: 20
+        burst: 10
+        period: 1m
+
+    rate-limit-api:
+      rateLimit:
+        average: 1000
+        burst: 300
+        period: 1m
+
+    rate-limit-public:
+      rateLimit:
+        average: 150
+        burst: 75
+        period: 1m
+
+    rate-limit-static:
+      rateLimit:
+        average: 2000
+        burst: 1000
+        period: 1m
+
+    #==================== SECURITY HEADERS ===============
+
+    secure-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - DELETE
+          - PATCH
+        accessControlMaxAge: 100
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        customFrameOptionsValue: SAMEORIGIN
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "same-origin"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=()"
+        customResponseHeaders:
+          X-Robots-Tag: "none,noarchive,nosnippet,notranslate,noimageindex,"
+          server: ""
+
+    #==================== PERFORMANCE =====================
+
+    compression:
+      compress:
+        defaultEncoding: gzip
+        minResponseBodyBytes: 1200
+        includedContentTypes:
+          - application/json
+          - text/html
+          - text/plain
+
+    buffer:
+      buffering:
+        maxResponseBodyBytes: 2000000
+        maxRequestBodyBytes: 10485760
+        memRequestBodyBytes: 2097152
+        memResponseBodyBytes: 2097152
+        retryExpression: "IsNetworkError() && Attempts() <= 2"
+
+    #==================== CROWDSEC SECURITY ===============
+
+    crowdsec:
+      plugin:
+        crowdsec-bouncer-traefik-plugin:
+          enabled: true
+          logLevel: INFO
+          LogFilePath: ""
+          updateIntervalSeconds: 60
+          updateMaxFailure: 0
+          defaultDecisionSeconds: 60
+          remediationStatusCode: 403
+          httpTimeoutSeconds: 10
+          clientMaxBodySize: 1048576
+          crowdsecMode: live
+          crowdsecAppsecEnabled: true
+          crowdsecAppsecHost: crowdsec:7422
+          crowdsecAppsecPath: "/"
+          crowdsecAppsecFailureBlock: true
+          crowdsecAppsecUnreachableBlock: true
+          crowdsecAppsecBodyLimit: 10485760
+          crowdsecLapiKey: '{{ env "CROWDSEC_LAPI_KEY" }}'
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080
+          crowdsecLapiPath: "/"
+          crowdsecLapiTLSInsecureVerify: false
+          crowdsecCapiMachineId: '{{ env "CROWDSEC_CAPI_LOGIN" }}'
+          crowdsecCapiPassword: '{{ env "CROWDSEC_CAPI_PASSWORD" }}'
+          crowdsecCapiScenarios:
+            - crowdsecurity/http-path-traversal-probing
+            - crowdsecurity/http-xss-probing
+            - crowdsecurity/http-generic-bf
+          forwardedHeadersTrustedIPs:
+            - "192.168.35.1/32"
+          clientTrustedIPs:
+            - "127.0.0.1"
+            - "10.0.0.0/8"
+            - "192.168.0.0/16"
+            - "172.16.0.0/12"
+          forwardedHeadersCustomName: "X-Real-Ip"
+          remediationHeadersCustomName: cs-remediation
+          metricsUpdateIntervalSeconds: 600
+
+    crowdsec-upload:
+      plugin:
+        crowdsec-bouncer-traefik-plugin:
+          enabled: true
+          logLevel: INFO
+          LogFilePath: ""
+          updateIntervalSeconds: 60
+          updateMaxFailure: 0
+          defaultDecisionSeconds: 60
+          remediationStatusCode: 403
+          httpTimeoutSeconds: 10
+          clientMaxBodySize: 1048576
+          crowdsecMode: live
+          crowdsecAppsecEnabled: false
+          crowdsecLapiKey: '{{ env "CROWDSEC_LAPI_KEY" }}'
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080
+          crowdsecLapiPath: "/"
+          crowdsecLapiTLSInsecureVerify: false
+          forwardedHeadersTrustedIPs:
+            - "192.168.35.1/32"
+          clientTrustedIPs:
+            - "127.0.0.1"
+            - "10.0.0.0/8"
+            - "192.168.0.0/16"
+            - "172.16.0.0/12"
+          forwardedHeadersCustomName: "X-Real-Ip"
+          remediationHeadersCustomName: cs-remediation
+
+    #==================== UTILITY ========================
+
+    redirect-to-https:
+      redirectScheme:
+        scheme: https

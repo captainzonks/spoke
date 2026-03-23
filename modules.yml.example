@@ -1,0 +1,88 @@
+# ==============================================================================
+# MODULES.YML - SPOKE MODULE REGISTRY
+# ==============================================================================
+# Description: Defines which modules to deploy and their site-specific config
+# Author: Matt Barham
+# Created: 2026-02-12
+# Version: 1.0.0
+# ==============================================================================
+# INSTRUCTIONS:
+#   1. Copy this file to modules.yml
+#   2. Update repo URLs, IPs, and secrets_map for your deployment
+#   3. Set enabled: false for modules you don't want
+#   4. Never commit modules.yml (it's gitignored)
+# ==============================================================================
+
+platform:
+  name: spoke
+  version: 1.0.0
+
+instance:
+  name: myserver
+  domain: example.com
+
+modules:
+  # --- Infrastructure Modules ---
+
+  monitoring:
+    repo: "https://github.com/captainzonks/spoke-monitoring.git"
+    ref: "main"
+    enabled: false
+    env_overrides:
+      GRAFANA_IP: "192.168.35.102"
+      PROMETHEUS_IP: "192.168.35.109"
+    secrets_map:
+      grafana_admin_password: "secrets/grafana/grafana_admin_password"
+
+  power:
+    repo: "https://github.com/captainzonks/spoke-power.git"
+    ref: "main"
+    enabled: false
+
+  database:
+    repo: "https://github.com/captainzonks/spoke-database.git"
+    ref: "main"
+    enabled: false
+
+  torrenting:
+    repo: "https://github.com/captainzonks/spoke-torrenting.git"
+    ref: "main"
+    enabled: false
+    env_overrides:
+      GLUETUN_IP: "192.168.35.80"
+      QBITTORRENT_IP: "192.168.35.82"
+    secrets_map:
+      vpn_wireguard_private_key: "secrets/vpn/wireguard_private_key"
+
+  plex:
+    repo: "https://github.com/captainzonks/spoke-plex.git"
+    ref: "main"
+    enabled: false
+    env_overrides:
+      PLEX_IP: "192.168.35.83"
+      TAUTULLI_IP: "192.168.35.87"
+
+  music:
+    repo: "https://github.com/captainzonks/spoke-music.git"
+    ref: "main"
+    enabled: false
+
+  protonmail:
+    repo: "https://github.com/captainzonks/spoke-protonmail.git"
+    ref: "main"
+    enabled: false
+
+  homepage:
+    repo: "https://github.com/captainzonks/spoke-homepage.git"
+    ref: "main"
+    enabled: false
+
+  foundryvtt:
+    repo: "https://github.com/captainzonks/spoke-foundryvtt.git"
+    ref: "main"
+    enabled: false
+
+  immich:
+    repo: "https://github.com/captainzonks/spoke-immich.git"
+    ref: "main"
+    enabled: false

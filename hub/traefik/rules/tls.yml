@@ -1,0 +1,39 @@
+# ==============================================================================
+# TLS - TRAEFIK TLS CONFIGURATION
+# ==============================================================================
+# Description: TLS certificate configuration for Traefik reverse proxy
+# Author: Matt Barham
+# Created: 2026-02-15
+# Version: 1.0.0
+# ==============================================================================
+# Security Level: HIGH
+# Contains Secrets: YES (references to certificate files)
+# ==============================================================================
+# Related Documentation:
+#   - Traefik TLS: https://doc.traefik.io/traefik/https/tls/
+# Dependencies:
+#   - TLS_DOMAIN_N_CERT_FILE / TLS_DOMAIN_N_KEY_FILE env vars (N = 1, 2, 3)
+#   - Certificate files mounted as Docker secrets (domain_N_cert, domain_N_key)
+# ==============================================================================
+# Domain slot mapping (deployer maps their domains to generic slots):
+#   domain_1 = primary domain (also used as default certificate)
+#   domain_2 = second domain (optional)
+#   domain_3 = third domain (optional)
+#
+# Files: secrets/tls/domain_N.pem + domain_N.key
+# To add more domains, add entries here and in docker-compose.yml secrets/env.
+# ==============================================================================
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: '{{ env "TLS_DOMAIN_1_CERT_FILE" }}'
+        keyFile: '{{ env "TLS_DOMAIN_1_KEY_FILE" }}'
+  certificates:
+    - certFile: '{{ env "TLS_DOMAIN_1_CERT_FILE" }}'
+      keyFile: '{{ env "TLS_DOMAIN_1_KEY_FILE" }}'
+    - certFile: '{{ env "TLS_DOMAIN_2_CERT_FILE" }}'
+      keyFile: '{{ env "TLS_DOMAIN_2_KEY_FILE" }}'
+    - certFile: '{{ env "TLS_DOMAIN_3_CERT_FILE" }}'
+      keyFile: '{{ env "TLS_DOMAIN_3_KEY_FILE" }}'

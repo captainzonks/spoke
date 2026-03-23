@@ -1,0 +1,71 @@
+# ==============================================================================
+# ROUTERS_HUB - TRAEFIK HUB SERVICE ROUTING
+# ==============================================================================
+# Description: HTTP routing rules for hub services (traefik, authentik)
+# Author: Matt Barham
+# Created: 2026-02-15
+# Version: 1.0.0
+# ==============================================================================
+# Security Level: HIGH
+# Contains Secrets: NO
+# ==============================================================================
+# Related Documentation:
+#   - Traefik Routing: https://doc.traefik.io/traefik/routing/routers/
+#   - Authentik Forward Auth: https://docs.goauthentik.io/docs/providers/proxy/
+# Dependencies:
+#   - services_hub.yml (service definitions)
+#   - middlewares.yml (middleware chains)
+#   - Environment variable: DOMAIN
+# ==============================================================================
+
+http:
+  routers:
+    #======================================================
+    #==================== TRAEFIK ========================
+    #======================================================
+
+    traefik-dashboard:
+      rule: Host(`traefik.{{ env "DOMAIN" }}`)
+      entryPoints: "websecure"
+      priority: 200
+      middlewares: chain-authentik@file
+      service: api@internal
+
+    traefik-metrics:
+      rule: Host(`traefik.{{ env "DOMAIN" }}`) && PathPrefix(`/metrics`)
+      entryPoints: "websecure"
+      priority: 300
+      middlewares: chain-monitoring@file
+      service: prometheus@internal
+
+    traefik-ping:
+      rule: Host(`traefik.{{ env "DOMAIN" }}`) && PathPrefix(`/ping`)
+      entryPoints: "ping"
+      priority: 300
+      middlewares: chain-monitoring@file
+      service: ping@internal
+
+    #======================================================
+    #==================== AUTHENTIK ======================
+    #======================================================
+
+    authentik-outpost-callback:
+      rule: Host(`auth.{{ env "DOMAIN" }}`) && PathPrefix(`/outpost.goauthentik.io`)
+      entryPoints: "websecure"
+      priority: 999
+      middlewares: chain-no-auth@file
+      service: authentik-server-svc@file
+
+    authentik-static-assets:
+      rule: Host(`auth.{{ env "DOMAIN" }}`) && (PathPrefix(`/static/`) || PathPrefix(`/media/`) || PathPrefix(`/images/`))
+      entryPoints: "websecure"
+      priority: 200
+      middlewares: chain-static-assets@file
+      service: authentik-server-svc@file
+
+    authentik-server:
+      rule: Host(`auth.{{ env "DOMAIN" }}`)
+      entryPoints: "websecure"
+      priority: 100
+      middlewares: chain-authentik-cors@file
+      service: authentik-server-svc@file

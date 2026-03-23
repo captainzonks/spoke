@@ -1,0 +1,51 @@
+# ==============================================================================
+# SPOKE - GITIGNORE
+# ==============================================================================
+# Description: Git ignore rules for Spoke hub-and-spoke server platform
+# Author: Matt Barham
+# Created: 2026-02-12
+# ==============================================================================
+
+# Site-specific configuration (contains personal domain, IPs, paths)
+shared/env/base.env
+shared/env/hub.env
+modules.yml
+
+# Secrets (passwords, API keys, certificates)
+/secrets/
+/secrets
+
+# Cloned module repositories (top-level only)
+/modules/
+
+# Runtime application data
+/appdata/
+
+# Generated environment files
+hub/.env
+
+# Docker build cache
+build/
+
+# Security scanning cache
+.cache_ggshield
+
+# Local MCP server configuration (instance-specific paths/credentials)
+.mcp.json
+
+# Editor and OS files
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# Log files
+*.log
+logs/
+
+# Backup files
+backups/
+*.bak

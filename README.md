@@ -35,16 +35,16 @@ Modules are independent repositories. Enable only the ones you need.
 
 | Module | Description |
 |--------|-------------|
-| monitoring | Grafana, Prometheus, Loki, Telegraf, Dozzle |
-| power | UPS monitoring (NUT) |
-| database | InfluxDB3, MinIO, CouchDB, VictoriaMetrics |
-| torrenting | VPN-protected downloads (Gluetun, qBittorrent) |
+| monitoring | Grafana, Prometheus, Loki, Telegraf, Dozzle, NUT UPS |
+| database | InfluxDB3, MinIO |
 | plex | Plex Media Server, Tautulli |
-| music | MusicBrainz Picard, Navidrome |
-| protonmail | ProtonMail Bridge |
+| immich | Self-hosted photo management |
+| books | Audiobookshelf, Calibre |
+| music | Navidrome, MusicBrainz Picard |
+| torrenting | VPN-protected downloads (Gluetun, qBittorrent, Soulseek) |
 | homepage | Homepage dashboard |
 | foundryvtt | Foundry Virtual Tabletop |
-| immich | Self-hosted photo management |
+| protonmail | ProtonMail Bridge |
 
 ## Quick Start
 

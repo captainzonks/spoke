@@ -5,12 +5,20 @@
 # Description: Ordered Spoke deployment on cold boot
 # Author: Matt Barham
 # Created: 2026-03-11
-# Modified: 2026-03-11
-# Version: 1.0.0
+# Modified: 2026-03-23
+# Version: 2.0.0
 # ==============================================================================
-# Purpose: Wait for Docker daemon readiness, then deploy hub and all modules
-#          in dependency order via 'make deploy-all'. Designed to run as a
-#          systemd user service on boot (replaces implicit container restart).
+# Purpose: Wait for Docker daemon readiness, deploy hub services, wait for
+#          critical hub health, then deploy modules. Designed to run as a
+#          systemd user service on boot.
+#
+# Boot timeline:
+#   1. Wait for Docker daemon
+#   2. Deploy hub (docker compose up -d)
+#   3. Wait for postgres-hub healthy (WAL recovery can take minutes)
+#   4. Wait for crowdsec healthy (depends on postgres)
+#   5. Wait for traefik healthy (depends on crowdsec)
+#   6. Deploy all enabled modules
 # ==============================================================================
 
 set -euo pipefail
@@ -19,7 +27,8 @@ IFS=$'\n\t'
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPOKE_DIR="${SPOKE_DIR:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
-MAX_WAIT=120
+DOCKER_WAIT=120
+HUB_HEALTH_WAIT=600
 POLL_INTERVAL=5
 LOG_TAG="spoke-boot-deploy"
 
@@ -27,42 +36,141 @@ log() {
     printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
 }
 
+# Wait for a container to report healthy
+# Usage: wait_healthy <container_name> <max_wait_seconds>
+wait_healthy() {
+    local container="$1"
+    local max_wait="$2"
+    local elapsed=0
+
+    while [[ $elapsed -lt $max_wait ]]; do
+        local status
+        status="$(docker inspect "$container" --format '{{.State.Health.Status}}' 2>/dev/null || echo 'missing')"
+
+        case "$status" in
+            healthy)
+                log "  ${container}: healthy (${elapsed}s)"
+                return 0
+                ;;
+            unhealthy)
+                log "  ${container}: unhealthy after ${elapsed}s"
+                return 1
+                ;;
+            missing)
+                log "  ${container}: not found, waiting... (${elapsed}s/${max_wait}s)"
+                ;;
+            *)
+                log "  ${container}: ${status} (${elapsed}s/${max_wait}s)"
+                ;;
+        esac
+
+        sleep "$POLL_INTERVAL"
+        elapsed=$((elapsed + POLL_INTERVAL))
+    done
+
+    log "  ${container}: timed out after ${max_wait}s"
+    return 1
+}
+
 log "Spoke boot deploy starting (SPOKE_DIR=${SPOKE_DIR})"
 
-# Wait for Docker daemon
+# ==============================================================================
+# PHASE 1: Wait for Docker daemon
+# ==============================================================================
 elapsed=0
 while ! docker info >/dev/null 2>&1; do
-    if [[ $elapsed -ge $MAX_WAIT ]]; then
-        log "ERROR: Docker daemon not ready after ${MAX_WAIT}s"
+    if [[ $elapsed -ge $DOCKER_WAIT ]]; then
+        log "ERROR: Docker daemon not ready after ${DOCKER_WAIT}s"
         exit 1
     fi
-    log "Waiting for Docker daemon... (${elapsed}s/${MAX_WAIT}s)"
+    log "Waiting for Docker daemon... (${elapsed}s/${DOCKER_WAIT}s)"
     sleep $POLL_INTERVAL
     elapsed=$((elapsed + POLL_INTERVAL))
 done
-
 log "Docker daemon ready after ${elapsed}s"
 
-# Wait for Docker networks (they may take a moment after daemon start)
-net_elapsed=0
-while ! docker network inspect troxy >/dev/null 2>&1; do
-    if [[ $net_elapsed -ge 30 ]]; then
-        log "WARNING: troxy network not found after 30s, proceeding anyway"
-        break
-    fi
-    sleep 2
-    net_elapsed=$((net_elapsed + 2))
-done
-
-log "Starting ordered deployment via 'make deploy-all'"
+# ==============================================================================
+# PHASE 2: Deploy hub services
+# ==============================================================================
+log "Deploying hub services..."
 cd "${SPOKE_DIR}"
-make deploy-all 2>&1
+make hub-deploy 2>&1
+log "Hub compose up complete — waiting for critical services..."
 
-exit_code=$?
-if [[ $exit_code -eq 0 ]]; then
-    log "Spoke boot deploy completed successfully"
-else
-    log "ERROR: Spoke boot deploy failed with exit code ${exit_code}"
+# ==============================================================================
+# PHASE 3: Wait for critical hub services to be healthy
+# ==============================================================================
+# Order matters: postgres must be healthy before crowdsec can start,
+# crowdsec must be healthy before traefik can start (when CROWDSEC_ENABLED).
+hub_healthy=true
+
+log "Waiting for postgres-hub..."
+if ! wait_healthy "postgres-hub" "$HUB_HEALTH_WAIT"; then
+    log "ERROR: postgres-hub failed health check — attempting restart"
+    docker restart postgres-hub
+    if ! wait_healthy "postgres-hub" 120; then
+        log "ERROR: postgres-hub still unhealthy after restart"
+        hub_healthy=false
+    fi
 fi
 
-exit $exit_code
+# Check if CrowdSec is enabled (container exists and is not a profile-only service)
+if docker inspect crowdsec >/dev/null 2>&1; then
+    log "Waiting for crowdsec..."
+    if ! wait_healthy "crowdsec" 300; then
+        log "WARNING: crowdsec failed health check — attempting restart"
+        docker restart crowdsec
+        if ! wait_healthy "crowdsec" 120; then
+            log "WARNING: crowdsec still unhealthy after restart"
+        fi
+    fi
+fi
+
+log "Waiting for traefik..."
+if ! wait_healthy "traefik" 300; then
+    log "WARNING: traefik failed health check — attempting restart"
+    docker restart traefik
+    if ! wait_healthy "traefik" 120; then
+        log "ERROR: traefik still unhealthy after restart"
+        hub_healthy=false
+    fi
+fi
+
+# Also wait for redis (needed by authentik and some modules)
+log "Waiting for redis..."
+if ! wait_healthy "redis" 60; then
+    log "WARNING: redis not healthy"
+fi
+
+if [[ "$hub_healthy" != "true" ]]; then
+    log "ERROR: Critical hub services not healthy — aborting module deployment"
+    log "Run 'make hub-health' to diagnose, then 'make deploy-all' to retry"
+    exit 1
+fi
+
+log "All critical hub services healthy"
+
+# ==============================================================================
+# PHASE 4: Deploy all enabled modules
+# ==============================================================================
+log "Deploying all enabled modules..."
+if command -v yq &>/dev/null && [ -f "${SPOKE_DIR}/modules.yml" ]; then
+    for module in $(yq -r '.modules | to_entries[] | select(.value.enabled == true) | .key' "${SPOKE_DIR}/modules.yml"); do
+        if [ -d "${SPOKE_DIR}/modules/${module}" ]; then
+            log "Deploying module: ${module}"
+            make deploy MODULE="$module" 2>&1 || log "WARNING: module ${module} deploy failed"
+        else
+            log "Skipping ${module} (not synced)"
+        fi
+    done
+else
+    log "WARNING: yq not available or modules.yml missing — deploying available modules"
+    for module_dir in "${SPOKE_DIR}"/modules/*/; do
+        module="$(basename "$module_dir")"
+        log "Deploying module: ${module}"
+        make deploy MODULE="$module" 2>&1 || log "WARNING: module ${module} deploy failed"
+    done
+fi
+
+log "Spoke boot deploy completed successfully"
+exit 0

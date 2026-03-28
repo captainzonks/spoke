@@ -121,6 +121,15 @@ http:
           - real-ip
           - authentik
 
+    chain-agent-api:
+      chain:
+        middlewares:
+          - rate-limit-api
+          - secure-headers
+          - real-ip
+          - crowdsec
+          - basic-auth-agent
+
     chain-authentik-cors:
       chain:
         middlewares:
@@ -160,6 +169,11 @@ http:
       basicAuth:
         usersFile: '{{ env "HTPASSWD_FILE" }}'
         realm: "Spoke"
+
+    basic-auth-agent:
+      basicAuth:
+        usersFile: '{{ env "AGENT_HTPASSWD_FILE" }}'
+        realm: "Spoke Agent API"
 
     authentik:
       forwardAuth:

@@ -72,6 +72,8 @@ secrets:
   # Traefik
   basic_auth_credentials:
     file: ${SECRETS_DIR}/traefik/basic_auth_credentials
+  agent_htpasswd_credentials:
+    file: ${SECRETS_DIR}/traefik/agent_htpasswd_credentials
 
   # CrowdSec
   crowdsec_lapi_key:
@@ -575,6 +577,7 @@ services:
 
     secrets:
       - basic_auth_credentials
+      - agent_htpasswd_credentials
       - crowdsec_lapi_key
       - domain_1_cert
       - domain_1_key

@@ -119,5 +119,10 @@ if [ -f "/run/secrets/basic_auth_credentials" ]; then
   export HTPASSWD_FILE
 fi
 
+if [ -f "/run/secrets/agent_htpasswd_credentials" ]; then
+  AGENT_HTPASSWD_FILE="/run/secrets/agent_htpasswd_credentials"
+  export AGENT_HTPASSWD_FILE
+fi
+
 # Execute the Traefik binary
 exec /entrypoint.sh "$@"

@@ -1,15 +1,16 @@
 [Unit]
-Description=CrowdSec Weekly Threat Summary Email
+Description=Spoke Daily Log Analysis Report
 
 [Service]
 Type=oneshot
 # TODO: Edit ExecStart path for your installation
 # ExecStartPre polls Docker readiness (user units cannot depend on system docker.service)
 ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do docker info &>/dev/null && exit 0; sleep 2; done; exit 1'
-ExecStart=/path/to/spoke/scripts/maintenance/crowdsec_weekly_summary.sh
+ExecStart=/path/to/spoke/scripts/maintenance/spoke_log_analysis.sh
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=crowdsec-weekly-summary
+SyslogIdentifier=spoke-log-analysis
+TimeoutStartSec=600
 
 # Security settings
 PrivateTmp=yes

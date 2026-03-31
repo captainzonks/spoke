@@ -1,5 +1,7 @@
 # Spoke
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E21U3S1R)
+
 A modular, open-source hub-and-spoke server platform for self-hosted infrastructure.
 
 ## What is Spoke?

@@ -1,13 +1,11 @@
 [Unit]
 Description=Portfolio Database Cleanup
-After=docker.service
-Requires=docker.service
 
 [Service]
 Type=oneshot
-# TODO: Edit User and ExecStart path for your installation
-User=your-user
-Group=docker
+# TODO: Edit ExecStart path for your installation
+# ExecStartPre polls Docker readiness (user units cannot depend on system docker.service)
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do docker info &>/dev/null && exit 0; sleep 2; done; exit 1'
 ExecStart=/path/to/spoke/scripts/maintenance/portfolio_cleanup.sh
 StandardOutput=journal
 StandardError=journal
@@ -21,4 +19,4 @@ ProtectHome=read-only
 ReadWritePaths=/tmp
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

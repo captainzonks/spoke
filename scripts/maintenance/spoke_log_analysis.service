@@ -7,6 +7,9 @@ Type=oneshot
 # ExecStartPre polls Docker readiness (user units cannot depend on system docker.service)
 ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do docker info &>/dev/null && exit 0; sleep 2; done; exit 1'
 ExecStart=/path/to/spoke/scripts/maintenance/spoke_log_analysis.sh
+Environment=INSTANCE_NAME=spoke
+# Claude Code CLI is typically in ~/.local/bin; systemd user units use a minimal PATH
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=spoke-log-analysis

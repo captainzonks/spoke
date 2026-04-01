@@ -171,8 +171,8 @@ query_loki() {
 }
 
 query_loki "critical_fatal" '{job="docker"} |~ `(?i)(fatal|panic|killed|oom|segfault|out of memory)`'
-query_loki "errors" '{job="docker"} | json | level=~`error|err|ERROR`'
-query_loki "warnings" '{job="docker"} | json | level=~`warn|warning|WARN|WARNING`' 2000
+query_loki "errors" '{job="docker"} | json | level=~`error|err|ERROR`' 2000
+query_loki "warnings" '{job="docker"} | json | level=~`warn|warning|WARN|WARNING`' 1000
 query_loki "system_issues" '{job="system"} |~ `(?i)(error|failed|critical|panic|oom)`'
 
 # ==============================================================================
@@ -231,13 +231,13 @@ fi
 for query_file in "${TMPDIR_LOGS}"/*.json; do
     label=$(basename "${query_file}" .json)
     ANALYSIS_PROMPT+=$(printf "\n### %s\n\n" "${label}")
-    # Trim large results to avoid context overflow — keep first 200KB per query
-    ANALYSIS_PROMPT+=$(head -c 204800 "${query_file}")
+    # Trim large results to avoid context overflow — keep first 100KB per query
+    ANALYSIS_PROMPT+=$(head -c 102400 "${query_file}")
     ANALYSIS_PROMPT+=$'\n'
 done
 
 # Run Claude analysis
-ANALYSIS_RESULT=$(printf "%s" "${ANALYSIS_PROMPT}" | claude -p --model "${CLAUDE_MODEL}" --allowedTools "" --output-format text 2>/dev/null) || {
+ANALYSIS_RESULT=$(printf "%s" "${ANALYSIS_PROMPT}" | claude -p --model "${CLAUDE_MODEL}" --allowedTools "" --output-format text) || {
     printf "ERROR: Claude analysis failed\n" >&2
     # Send a basic report without AI analysis
     ANALYSIS_RESULT='{"summary":"AI analysis unavailable — Claude CLI returned an error. Raw log queries completed but could not be triaged.","total_events":0,"health":"unknown","sections":[]}'

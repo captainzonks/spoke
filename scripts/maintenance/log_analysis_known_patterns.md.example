@@ -1,0 +1,26 @@
+# Known Patterns - Spoke Log Analysis
+# ==============================================================================
+# This file provides institutional knowledge to the AI analysis model.
+# Copy to `log_analysis_known_patterns.md` (same directory) and customize
+# for your instance. The analysis script loads it automatically if present.
+#
+# Format: document each known pattern with a heading, description, and
+# guidance on how the AI should classify it. Be specific about what log
+# messages to expect and when they are benign vs. concerning.
+# ==============================================================================
+
+## Example: Service WebSocket Reconnection (LOW/INFO)
+# Some services maintain persistent WebSocket connections that periodically
+# cycle. This produces warning-level "close" and "broken pipe" log entries.
+# These are normal if the service reconnects successfully afterward.
+# Only escalate if reconnection fails or downstream services are affected.
+
+## Example: Database Client Disconnects During Restarts (contextual)
+# When a database is intentionally restarted, client containers will log
+# FATAL connection errors. These are expected during maintenance windows.
+# Only flag as CRITICAL if they persist beyond a few minutes.
+
+## Example: Log Shipper Old Sample Rejection (LOW)
+# If the log shipper (Alloy/Promtail) was offline, it may try to ship
+# stale logs that exceed the retention window. The log store rejects them.
+# This is a one-time catch-up event, not ongoing data loss.

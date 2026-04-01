@@ -42,6 +42,9 @@ build/
 .vscode/
 *.code-workspace
 
+# Instance-specific known patterns for log analysis
+scripts/maintenance/log_analysis_known_patterns.md
+
 # Log files
 *.log
 logs/

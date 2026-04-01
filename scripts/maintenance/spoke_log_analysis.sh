@@ -181,6 +181,14 @@ query_loki "system_issues" '{job="system"} |~ `(?i)(error|failed|critical|panic|
 
 printf "\n[3/4] Running AI analysis with Claude (%s)...\n" "${CLAUDE_MODEL}"
 
+# Load known patterns context if available
+KNOWN_PATTERNS_FILE="${SCRIPT_DIR}/log_analysis_known_patterns.md"
+KNOWN_PATTERNS=""
+if [[ -f "${KNOWN_PATTERNS_FILE}" ]]; then
+    KNOWN_PATTERNS=$(cat "${KNOWN_PATTERNS_FILE}")
+    printf "  Loaded known patterns from %s\n" "${KNOWN_PATTERNS_FILE}"
+fi
+
 # Build the analysis prompt with raw log data
 ANALYSIS_PROMPT=$(cat <<'PROMPT_HEADER'
 You are analyzing server logs for a Spoke infrastructure instance. The raw Loki query results are below in JSON format. Each result set contains stream labels and timestamped log values.
@@ -213,6 +221,11 @@ Keep the total JSON under 50KB.
 
 PROMPT_HEADER
 )
+
+# Inject known patterns if available
+if [[ -n "${KNOWN_PATTERNS}" ]]; then
+    ANALYSIS_PROMPT+=$(printf "\n## Known Patterns (Institutional Knowledge)\n\nThe following patterns have been observed and classified by the operator. Use these to calibrate your severity ratings — do not escalate items that match known-benign patterns.\n\n%s\n\n## Log Query Results\n\n" "${KNOWN_PATTERNS}")
+fi
 
 # Append each query result
 for query_file in "${TMPDIR_LOGS}"/*.json; do

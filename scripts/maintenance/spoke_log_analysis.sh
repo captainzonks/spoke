@@ -237,11 +237,16 @@ for query_file in "${TMPDIR_LOGS}"/*.json; do
 done
 
 # Run Claude analysis
-ANALYSIS_RESULT=$(printf "%s" "${ANALYSIS_PROMPT}" | claude -p --model "${CLAUDE_MODEL}" --allowedTools "" --output-format text) || {
+CLAUDE_STDERR=$(mktemp)
+ANALYSIS_RESULT=$(printf "%s" "${ANALYSIS_PROMPT}" | claude -p --model "${CLAUDE_MODEL}" --allowedTools "" --output-format text 2>"${CLAUDE_STDERR}") || {
     printf "ERROR: Claude analysis failed\n" >&2
+    if [[ -s "${CLAUDE_STDERR}" ]]; then
+        printf "  Claude stderr: %s\n" "$(head -c 500 "${CLAUDE_STDERR}")" >&2
+    fi
     # Send a basic report without AI analysis
     ANALYSIS_RESULT='{"summary":"AI analysis unavailable — Claude CLI returned an error. Raw log queries completed but could not be triaged.","total_events":0,"health":"unknown","sections":[]}'
 }
+rm -f "${CLAUDE_STDERR}"
 
 # Validate JSON output
 if ! printf "%s" "${ANALYSIS_RESULT}" | jq empty 2>/dev/null; then

@@ -5,6 +5,7 @@
 # Description: Validates networks, secrets, env, and stack.yml for a module
 # Author: Matt Barham
 # Created: 2026-02-12
+# Modified: 2026-02-12
 # Version: 1.1.0
 # ==============================================================================
 # Usage: validate_module.sh MODULE_NAME [--post-env]

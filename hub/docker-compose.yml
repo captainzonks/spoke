@@ -4,6 +4,7 @@
 # Description: Core hub services - proxy, auth, security, database, cache
 # Author: Matt Barham
 # Created: 2026-02-12
+# Modified: 2026-04-06
 # Version: 1.0.0
 # ==============================================================================
 # Services: socket-proxy, traefik, authentik, authentik-worker,
@@ -204,7 +205,7 @@ services:
         ipv4_address: ${POSTGRES_IP}
 
     ports:
-      - ${POSTGRES_PORT}:5432
+      - 127.0.0.1:${POSTGRES_PORT}:5432
 
     depends_on:
       socket-proxy:
@@ -271,7 +272,7 @@ services:
         ipv4_address: ${REDIS_IP_T}
 
     ports:
-      - ${REDIS_PORT}:6379
+      - 127.0.0.1:${REDIS_PORT}:6379
 
     depends_on:
       socket-proxy:

@@ -5,6 +5,7 @@
 # Description: Reads modules.yml and clones/pulls enabled module repos
 # Author: Matt Barham
 # Created: 2026-02-12
+# Modified: 2026-02-12
 # Version: 1.0.0
 # ==============================================================================
 # Usage: sync_modules.sh [MODULE_NAME]

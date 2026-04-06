@@ -6,6 +6,7 @@
 #              with a mod_ prefix to prevent naming collisions
 # Author: Matt Barham
 # Created: 2026-02-12
+# Modified: 2026-02-12
 # Version: 1.2.0
 # ==============================================================================
 # Usage: deploy_traefik_rules.sh MODULE_NAME

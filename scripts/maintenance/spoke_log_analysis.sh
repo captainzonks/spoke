@@ -116,8 +116,17 @@ if ! command -v claude &>/dev/null; then
     exit 1
 fi
 
-if ! curl -sf "${LOKI_URL}/ready" &>/dev/null; then
-    printf "ERROR: Loki not reachable at %s\n" "${LOKI_URL}" >&2
+_loki_ready=false
+for _i in $(seq 1 12); do
+    if curl -sf --max-time 5 "${LOKI_URL}/ready" &>/dev/null; then
+        _loki_ready=true
+        break
+    fi
+    printf "  Waiting for Loki... (%s/12)\n" "${_i}"
+    sleep 10
+done
+if [[ "${_loki_ready}" != "true" ]]; then
+    printf "ERROR: Loki not reachable at %s after 2 minutes\n" "${LOKI_URL}" >&2
     # Attempt to send alert email if relay is available
     if curl -sf "${RELAY_URL}/health" &>/dev/null; then
         curl -sf -X POST "${RELAY_URL}/send" \
@@ -239,14 +248,22 @@ done
 # Run Claude analysis
 CLAUDE_STDERR=$(mktemp)
 ANALYSIS_RESULT=$(printf "%s" "${ANALYSIS_PROMPT}" | claude -p --model "${CLAUDE_MODEL}" --allowedTools "" --output-format text 2>"${CLAUDE_STDERR}") || {
-    printf "ERROR: Claude analysis failed\n" >&2
+    printf "ERROR: Claude analysis failed (exit code: %s)\n" "$?" >&2
     if [[ -s "${CLAUDE_STDERR}" ]]; then
         printf "  Claude stderr: %s\n" "$(head -c 500 "${CLAUDE_STDERR}")" >&2
+    else
+        printf "  Claude stderr: (empty — possible auth token expiry or rate limit)\n" >&2
     fi
     # Send a basic report without AI analysis
     ANALYSIS_RESULT='{"summary":"AI analysis unavailable — Claude CLI returned an error. Raw log queries completed but could not be triaged.","total_events":0,"health":"unknown","sections":[]}'
 }
 rm -f "${CLAUDE_STDERR}"
+
+# Treat empty output as a failure
+if [[ -z "${ANALYSIS_RESULT}" ]]; then
+    printf "ERROR: Claude returned empty output (possible auth token expiry)\n" >&2
+    ANALYSIS_RESULT='{"summary":"AI analysis unavailable — Claude CLI returned empty output. Possible auth token expiry.","total_events":0,"health":"unknown","sections":[]}'
+fi
 
 # Validate JSON output
 if ! printf "%s" "${ANALYSIS_RESULT}" | jq empty 2>/dev/null; then

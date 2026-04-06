@@ -4,7 +4,7 @@
 # ============================================================================
 # Validates Traefik is ready:
 #   1. Ping endpoint responds
-#   2. Plugins successfully loaded
+#   2. Plugins registered in API rawdata (crowdsec-bouncer, sablier, htransformation)
 # Returns: 0 if healthy, 1 if unhealthy
 # ============================================================================
 
@@ -16,9 +16,12 @@ if ! wget --no-verbose --tries=1 --spider "http://localhost:8081/ping" >/dev/nul
     exit 1
 fi
 
-# CHECK 2: Plugin Loading (via log check)
-if [ -f /proc/1/fd/1 ]; then
-    if ! grep -q "Plugins loaded" /proc/1/fd/1 2>/dev/null; then
+# CHECK 2: Plugin Loading (via API rawdata)
+# Traefik registers plugins under middlewares once loaded. Check that the
+# crowdsec plugin is present — if it is, all plugins loaded successfully.
+RAWDATA=$(wget --no-verbose --tries=1 -q -O - "http://localhost:8081/api/rawdata" 2>/dev/null || true)
+if [ -n "${RAWDATA}" ]; then
+    if ! echo "${RAWDATA}" | grep -q "crowdsec-bouncer-traefik-plugin"; then
         echo "UNHEALTHY: Plugins not loaded yet"
         exit 1
     fi

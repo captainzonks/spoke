@@ -4,6 +4,7 @@
 # Description: TLS certificate configuration for Traefik reverse proxy
 # Author: Matt Barham
 # Created: 2026-02-15
+# Modified: 2026-02-15
 # Version: 1.0.0
 # ==============================================================================
 # Security Level: HIGH

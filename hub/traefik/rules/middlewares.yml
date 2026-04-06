@@ -4,6 +4,7 @@
 # Description: Reusable middleware chains and components for the Spoke platform
 # Author: Matt Barham
 # Created: 2026-02-12
+# Modified: 2026-02-12
 # Version: 1.0.0
 # ==============================================================================
 # Note: Module-specific middleware should be defined in module traefik/ dirs

@@ -5,6 +5,7 @@
 # Description: Creates the .env file for a module by merging layers
 # Author: Matt Barham
 # Created: 2026-02-12
+# Modified: 2026-02-12
 # Version: 1.1.0
 # ==============================================================================
 # Usage: generate_module_env.sh MODULE_NAME [--force]

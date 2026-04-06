@@ -4,6 +4,7 @@
 # Description: Middleware chains without CrowdSec — used when CROWDSEC_ENABLED=false
 # Author: Matt Barham
 # Created: 2026-03-15
+# Modified: 2026-03-15
 # Version: 1.0.0
 # ==============================================================================
 # Note: deploy_hub_rules.sh deploys this file as hub_middlewares.yml when

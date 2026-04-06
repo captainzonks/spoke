@@ -6,6 +6,7 @@
 #              The depends_on entry activates the crowdsec profile service.
 # Author: Matt Barham
 # Created: 2026-03-15
+# Modified: 2026-03-15
 # Version: 1.0.0
 # ==============================================================================
 # Usage: Applied automatically via Makefile HUB_COMPOSE_FILES when

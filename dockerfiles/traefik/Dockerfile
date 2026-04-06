@@ -4,6 +4,7 @@
 # Description: Custom Traefik build with entrypoint/healthcheck scripts
 # Author: Matt Barham
 # Created: 2026-02-12
+# Modified: 2026-04-06
 # Version: 3.6.7-custom
 # ==============================================================================
 # Base Image: traefik:v3.6.7

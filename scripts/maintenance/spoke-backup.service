@@ -1,0 +1,24 @@
+[Unit]
+Description=Spoke Config Backup
+Documentation=https://github.com/captainzonks/spoke
+# Backup runs only when /mnt/backup is mounted
+RequiresMountsFor=/mnt/backup
+
+[Service]
+Type=oneshot
+# TODO: Edit ExecStart path for your installation
+ExecStart=/path/to/spoke/scripts/maintenance/spoke_backup.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spoke-backup
+
+# Security settings
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# Needs read access to SPOKE_DIR and write access to backup destination
+ReadWritePaths=/mnt/backup
+
+[Install]
+WantedBy=default.target

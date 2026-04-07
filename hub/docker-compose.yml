@@ -64,6 +64,10 @@ secrets:
   postgres_password:
     file: ${SECRETS_DIR}/postgres/postgres_password
 
+  # Redis
+  redis_password:
+    file: ${SECRETS_DIR}/redis/redis_password
+
   # Authentik
   authentik_psql_password:
     file: ${SECRETS_DIR}/postgres/authentik_psql_password
@@ -279,14 +283,15 @@ services:
         condition: service_healthy
 
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $(cat /run/secrets/redis_password) ping | grep PONG"]
       interval: 30s
       timeout: 3s
       retries: 5
       start_period: 20s
 
+    entrypoint: ["/redis-entrypoint.sh"]
+
     command:
-      - redis-server
       - --maxmemory
       - 800mb
       - --maxmemory-policy
@@ -317,6 +322,7 @@ services:
       - REDIS_PORT=${REDIS_PORT}
 
     volumes:
+      - ${SPOKE_DIR}/hub/redis/redis-entrypoint.sh:/redis-entrypoint.sh:ro
       - ${APPDATA_DIR}/redis/data/:/data/:rw
       - ${LOCALTIME}:/etc/localtime:ro
 
@@ -324,6 +330,9 @@ services:
       - /tmp/:rw,size=200m
       - /run/:rw,size=50m
       - /dev/shm/:rw,size=1g
+
+    secrets:
+      - redis_password
 
   #======================================
   # CROWDSEC - Security IPS
@@ -579,6 +588,7 @@ services:
       - basic_auth_credentials
       - agent_htpasswd_credentials
       - crowdsec_lapi_key
+      - redis_password
       - domain_1_cert
       - domain_1_key
       - domain_2_cert

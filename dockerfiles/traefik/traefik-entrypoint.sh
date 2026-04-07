@@ -114,6 +114,12 @@ if [ -f "/run/secrets/crowdsec_online_api_password" ]; then
   export CROWDSEC_CAPI_PASSWORD
 fi
 
+if [ -f "/run/secrets/redis_password" ]; then
+  REDIS_PASSWORD="$(cat /run/secrets/redis_password)"
+  export REDIS_PASSWORD
+  set -- "$@" "--providers.redis.password=${REDIS_PASSWORD}"
+fi
+
 if [ -f "/run/secrets/basic_auth_credentials" ]; then
   HTPASSWD_FILE="/run/secrets/basic_auth_credentials"
   export HTPASSWD_FILE

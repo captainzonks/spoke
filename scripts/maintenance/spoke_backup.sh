@@ -96,22 +96,24 @@ done
 # VALIDATION
 # ==============================================================================
 
-if ! command -v restic &>/dev/null; then
-    printf "ERROR: restic not found. Install with: sudo pacman -S restic\n" >&2
-    exit 1
-fi
+if [[ "${DRY_RUN}" != "true" ]]; then
+    if ! command -v restic &>/dev/null; then
+        printf "ERROR: restic not found. Install with: sudo pacman -S restic\n" >&2
+        exit 1
+    fi
 
-if [[ ! -f "${RESTIC_PASSWORD_FILE}" ]]; then
-    printf "ERROR: Restic password file not found: %s\n" "${RESTIC_PASSWORD_FILE}" >&2
-    printf "       Create it with: openssl rand -base64 32 > %s\n" "${RESTIC_PASSWORD_FILE}" >&2
-    printf "       Then set permissions: chmod 640 %s\n" "${RESTIC_PASSWORD_FILE}" >&2
-    exit 1
-fi
+    if [[ ! -f "${RESTIC_PASSWORD_FILE}" ]]; then
+        printf "ERROR: Restic password file not found: %s\n" "${RESTIC_PASSWORD_FILE}" >&2
+        printf "       Create it with: openssl rand -base64 32 > %s\n" "${RESTIC_PASSWORD_FILE}" >&2
+        printf "       Then set permissions: chmod 640 %s\n" "${RESTIC_PASSWORD_FILE}" >&2
+        exit 1
+    fi
 
-if [[ ! -d "${BACKUP_DEST}" ]]; then
-    printf "ERROR: Backup destination not found: %s\n" "${BACKUP_DEST}" >&2
-    printf "       Create it or check that /mnt/backup is mounted\n" >&2
-    exit 1
+    if [[ ! -d "${BACKUP_DEST}" ]]; then
+        printf "ERROR: Backup destination not found: %s\n" "${BACKUP_DEST}" >&2
+        printf "       Create it or check that /mnt/backup is mounted\n" >&2
+        exit 1
+    fi
 fi
 
 # ==============================================================================

@@ -737,6 +737,12 @@ status: ## System: Show status of all running Spoke containers
 		echo ""; \
 	done
 
+.PHONY: log-analysis
+log-analysis: ## System: Run AI log analysis (HOURS=N for lookback window, DRY_RUN=true to skip email)
+	@$(SPOKE_DIR)/scripts/maintenance/spoke_log_analysis.sh \
+		$(if $(HOURS),--hours $(HOURS)) \
+		$(if $(filter true,$(DRY_RUN)),--dry-run)
+
 .PHONY: clean-docker
 clean-docker: ## System: Clean Docker resources (stopped containers, dangling images)
 	@echo -e "$(YELLOW)This will remove stopped containers, dangling images, and unused networks$(NC)"

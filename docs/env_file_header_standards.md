@@ -213,7 +213,7 @@ Always use `VAR=value` (no quotes unless value contains spaces/special chars):
 # Correct
 TZ=America/Denver
 SPOKE_DIR=/path/to/spoke
-TRAEFIK_IMAGE=traefik:3.3.3
+TRAEFIK_IMAGE=traefik:3.6.13
 
 # Wrong
 TZ="America/Denver"   # No quotes for simple values
@@ -266,12 +266,12 @@ SSL_ENABLED=true
 #      {SERVICE}_IMAGE=repo:1.2.3
 
 # Custom builds (use TAG pattern for easier updates)
-TRAEFIK_TAG=3.3.3-custom
+TRAEFIK_TAG=3.6.13-custom
 TRAEFIK_IMAGE=${SPOKE_DIR}/dockerfiles/traefik:${TRAEFIK_TAG}
 
 # Stable third-party images
-REDIS_IMAGE=redis:8.0.1-alpine
-SOCKET_PROXY_IMAGE=wollomatic/socket-proxy:1.11.0
+REDIS_IMAGE=redis:8.6.2-alpine
+SOCKET_PROXY_IMAGE=wollomatic/socket-proxy:1.11.4
 
 #==========================================================================
 # HUB NETWORK CONFIGURATION

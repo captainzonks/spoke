@@ -72,7 +72,7 @@ This document tracks Docker secrets support capabilities for all services deploy
 #### Traefik
 **Support**: Custom (Spoke Implementation)
 **Format**: `VAR_FILE=/run/secrets/secret_name`
-**Image**: `rome/traefik:3.6.7-custom`
+**Image**: `rome/traefik:3.6.13-custom`
 
 Traefik has basic `_FILE` support for some variables in newer versions, but Spoke's custom entrypoint.sh provides comprehensive handling for all secret variables.
 
@@ -121,7 +121,7 @@ secrets:
 #### CrowdSec
 **Support**: Custom (Spoke Implementation)
 **Format**: `VAR_FILE=/run/secrets/secret_name`
-**Image**: `rome/crowdsec:v1.7.6-custom`
+**Image**: `rome/crowdsec:v1.7.7-custom`
 
 Spoke's custom build adds `_FILE` support via entrypoint preprocessing.
 
@@ -133,7 +133,7 @@ Spoke's custom build adds `_FILE` support via entrypoint preprocessing.
 
 #### socket-proxy
 **Support**: None
-**Image**: `wollomatic/socket-proxy:1.10.1`
+**Image**: `wollomatic/socket-proxy:1.11.4`
 
 Lightweight proxy with minimal configuration. No sensitive secrets required (uses socket permissions).
 
@@ -170,7 +170,7 @@ secrets:
 #### PostgreSQL
 **Support**: Native
 **Format**: `VAR_FILE=/run/secrets/secret_name`
-**Image**: `rome/postgres:18.1-custom` / `rome/postgres:17.7-custom`
+**Image**: `rome/postgres:18.3-custom` / `rome/postgres:17.7-custom`
 
 Official PostgreSQL images support `_FILE` suffix for all `POSTGRES_*` variables.
 
@@ -195,7 +195,7 @@ secrets:
 
 #### Redis
 **Support**: None
-**Image**: `redis:8.4.0-alpine`
+**Image**: `redis:8.6.2-alpine`
 
 Official Redis image doesn't use environment variables for configuration. Uses command-line arguments or redis.conf file.
 
@@ -655,7 +655,7 @@ Spoke's genetics module uses custom-built containers with `_FILE` support in ent
 - `genetics-frontend` - React frontend
 - `genetics-worker` - Background task processor
 - `genetics-redis` - Redis for caching/queues
-- `postgres18-genetics` - PostgreSQL 18.1 database
+- `postgres18-genetics` - PostgreSQL 18.3 database
 
 **Implementation**:
 ```yaml

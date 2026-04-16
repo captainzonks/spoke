@@ -4,13 +4,14 @@
 # Description: PostgreSQL with custom UID/GID for host filesystem permissions
 # Author: Matt Barham
 # Created: 2026-02-12
-# Version: 18.1-custom
+# Modified: 2026-04-16
+# Version: 18.3-custom
 # ==============================================================================
-# Base Image: postgres:18.1
+# Base Image: postgres:18.3
 # Security: custom user mapping (remaps from default 999:999)
 # ==============================================================================
 
-FROM postgres:18.1
+FROM postgres:18.3
 
 ARG USER_ID
 ARG GROUP_ID

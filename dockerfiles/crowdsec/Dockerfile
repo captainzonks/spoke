@@ -4,13 +4,14 @@
 # Description: Custom CrowdSec build with non-root user configuration
 # Author: Matt Barham
 # Created: 2026-02-12
-# Version: 1.7.6-custom
+# Modified: 2026-04-16
+# Version: 1.7.7-custom
 # ==============================================================================
-# Base Image: crowdsecurity/crowdsec:v1.7.6
+# Base Image: crowdsecurity/crowdsec:v1.7.7
 # Security: non-root user, proper plugin permissions
 # ==============================================================================
 
-FROM crowdsecurity/crowdsec:v1.7.6
+FROM crowdsecurity/crowdsec:v1.7.7
 
 ARG USER_ID
 ARG GROUP_ID

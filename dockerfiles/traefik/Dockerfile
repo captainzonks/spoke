@@ -4,10 +4,10 @@
 # Description: Custom Traefik build with entrypoint/healthcheck scripts
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-06
-# Version: 3.6.7-custom
+# Modified: 2026-04-16
+# Version: 3.6.13-custom
 # ==============================================================================
-# Base Image: traefik:v3.6.7
+# Base Image: traefik:v3.6.13
 # Security: non-root user execution, plugin readiness validation
 # ==============================================================================
 # Enhancements:
@@ -16,7 +16,7 @@
 #   - curl, netcat-openbsd: for connectivity checks
 # ==============================================================================
 
-FROM traefik:v3.6.7
+FROM traefik:v3.6.13
 
 ARG USER_ID
 ARG GROUP_ID

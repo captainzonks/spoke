@@ -180,10 +180,15 @@ query_loki() {
     printf "  %-25s %s entries\n" "${label}:" "${result_count}"
 }
 
-query_loki "critical_fatal" '{job="docker"} |~ `(?i)(fatal|panic|killed|oom|segfault|out of memory)`'
+# Use word boundaries and specific tokens to cut false positives:
+# - \bfatal\b / \bpanic\b match the standalone words (not "fatal_error" / "panicked")
+# - \boom[-_ ]?kill captures "OOM kill" / "oom-killer" but not "zoom" / "room"
+# - Explicit SIG* names catch actual process-signal events (not Django "signals")
+# - "killed" was removed — too broad; real kills show as OOM or explicit SIG* above
+query_loki "critical_fatal" '{job="docker"} |~ `(?i)(\bfatal\b|\bpanic\b|\bsegfault\b|out of memory|\boom[-_ ]?kill|core dump|\bSIGKILL\b|\bSIGSEGV\b|\bSIGABRT\b)`'
 query_loki "errors" '{job="docker"} | json | level=~`error|err|ERROR`' 2000
 query_loki "warnings" '{job="docker"} | json | level=~`warn|warning|WARN|WARNING`' 1000
-query_loki "system_issues" '{job="system"} |~ `(?i)(error|failed|critical|panic|oom)`'
+query_loki "system_issues" '{job="system"} |~ `(?i)(\berror\b|\bfailed\b|\bcritical\b|\bpanic\b|\boom[-_ ]?kill)`'
 
 # ==============================================================================
 # STEP 3: AI ANALYSIS
@@ -216,6 +221,32 @@ You are analyzing server logs for a Spoke infrastructure instance. The raw Loki 
 4. Ignore noise: health check failures for stopped containers are expected (mention briefly)
 5. Context matters: errors from critical infrastructure (traefik, authentik, postgres, crowdsec) rank higher
 6. For CRITICAL/HIGH items, suggest a specific remediation step
+
+## Evidence Rules (CRITICAL - read before writing any finding)
+
+Every finding must be traceable to raw log lines present below. Specifically:
+
+- **Quote before claiming.** For any claim of a process signal, crash, shutdown,
+  restart, OOM, or worker recycling, the `issue` field must include a verbatim
+  fragment (>= 20 chars) from an actual log line that contains one of these
+  explicit keywords: `SIGINT`, `SIGTERM`, `SIGKILL`, `SIGSEGV`, `SIGABRT`,
+  `Received signal`, `forwarding signal`, `Out of memory`, `oom-killer`,
+  `Killed process`, `segfault`, `core dumped`, `panic:`, `Shutting down`,
+  `Stopping worker`, or `Worker <id> stopped`. If no such line is present in
+  the data below, do not produce the finding.
+- **Do NOT infer from PIDs.** PID values are not evidence. High PID numbers,
+  sequential PID numbers, or multiple distinct PIDs do NOT constitute worker
+  recycling, churn, or signals. Report such things only when an explicit
+  signal/shutdown line exists.
+- **Framework "signals" ≠ Unix signals.** Log lines mentioning Django-style
+  `signals` modules (e.g. `authentik.X.signals`, logger names ending in
+  `.signals`, "Imported related module ... signals") are framework pub/sub
+  imports. Never report these as SIGINT/SIGTERM/SIGKILL events.
+- **Timestamps and PIDs must be verbatim.** Every `first_seen`, `last_seen`,
+  `count`, and any PID you cite must come from the raw data. Do not estimate,
+  interpolate, or synthesize values.
+- **Prefer omission over fabrication.** If the data does not clearly support a
+  finding, leave it out. An empty section is better than an invented one.
 
 ## Output Format
 

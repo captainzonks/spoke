@@ -24,3 +24,28 @@
 # If the log shipper (Alloy/Promtail) was offline, it may try to ship
 # stale logs that exceed the retention window. The log store rejects them.
 # This is a one-time catch-up event, not ongoing data loss.
+
+## Anti-Hallucination: Framework "signals" Are Not Unix Signals
+# Django (and some other frameworks) use the word "signals" for a pub/sub
+# decorator pattern. Log lines like "Imported related module X.signals" or
+# loggers named "*.signals" are framework code, NOT Unix process signals.
+# Do NOT report SIGINT/SIGTERM/SIGKILL events based on these lines.
+#
+# A genuine process-signal event in logs will contain one of:
+#   - The uppercase signal name (SIGINT, SIGTERM, SIGKILL, SIGSEGV, SIGABRT)
+#   - "Received signal N", "signal N received", "forwarding signal"
+#   - dumb-init signal-forwarding lines
+#   - OOM keywords: "Out of memory: Killed process", "oom-killer"
+#   - Worker-lifecycle lines: "Shutting down", "Stopping worker", "Worker stopped"
+
+## Anti-Hallucination: Evidence Requirement for Signal/Crash/Restart Findings
+# For any finding that claims a process was signaled, crashed, restarted,
+# or recycled, the report MUST quote at least one verbatim log line that
+# contains an explicit keyword from the list above. Findings that cannot
+# cite such a line must be downgraded to INFO or omitted.
+#
+# Do NOT infer process events from indirect evidence alone (e.g., "PIDs
+# increment sequentially" is not evidence of worker recycling — PIDs only
+# advance when processes are spawned, which is an ordinary fork; high PID
+# numbers by themselves mean nothing). Do NOT synthesize PID lists or
+# timestamps that are not literally present in the raw log data.

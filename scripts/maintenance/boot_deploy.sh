@@ -92,9 +92,26 @@ log "Docker daemon ready after ${elapsed}s"
 # ==============================================================================
 # PHASE 2: Deploy hub services
 # ==============================================================================
+# Compose's depends_on: service_healthy gate can time out when authentik takes
+# longer than its start_period on cold boot (postgres WAL recovery + django
+# migrations). Retry a few times, then fall through — Phase 3 does the
+# authoritative health validation with restart logic.
 log "Deploying hub services..."
 cd "${SPOKE_DIR}"
-make hub-deploy 2>&1
+hub_deploy_attempt=1
+hub_deploy_max=3
+while true; do
+    if make hub-deploy 2>&1; then
+        break
+    fi
+    if [[ $hub_deploy_attempt -ge $hub_deploy_max ]]; then
+        log "WARNING: hub-deploy failed ${hub_deploy_attempt}× — continuing to Phase 3 health validation"
+        break
+    fi
+    log "WARNING: hub-deploy failed (attempt ${hub_deploy_attempt}/${hub_deploy_max}) — retrying in 30s"
+    sleep 30
+    hub_deploy_attempt=$((hub_deploy_attempt + 1))
+done
 log "Hub compose up complete — waiting for critical services..."
 
 # ==============================================================================
@@ -140,6 +157,20 @@ fi
 log "Waiting for redis..."
 if ! wait_healthy "redis" 60; then
     log "WARNING: redis not healthy"
+fi
+
+# Authentik (forward-auth gate for modules). Slow on cold boot due to django
+# migrations. Non-fatal — modules will deploy and work; only SSO-protected
+# routes will fail until authentik recovers.
+if docker inspect authentik >/dev/null 2>&1; then
+    log "Waiting for authentik..."
+    if ! wait_healthy "authentik" 300; then
+        log "WARNING: authentik failed health check — attempting restart"
+        docker restart authentik
+        if ! wait_healthy "authentik" 180; then
+            log "WARNING: authentik still unhealthy — SSO-gated routes will fail until recovered"
+        fi
+    fi
 fi
 
 if [[ "$hub_healthy" != "true" ]]; then

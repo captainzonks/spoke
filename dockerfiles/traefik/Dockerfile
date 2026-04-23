@@ -4,12 +4,12 @@
 # Description: Custom Traefik build with entrypoint/healthcheck scripts
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 3.6.13-custom
+# Modified: 2026-04-23
+# Version: 3.6.14-custom
 # Host: Your Server
 # ==============================================================================
 # Type: Dockerfile
-# Base Image: traefik:v3.6.13
+# Base Image: traefik:v3.6.14
 # Component: spoke hub / service: traefik
 # Security: non-root user execution, plugin readiness validation
 # ==============================================================================
@@ -19,7 +19,7 @@
 #   - curl, netcat-openbsd: for connectivity checks
 # ==============================================================================
 
-FROM traefik:v3.6.13
+FROM traefik:v3.6.14
 
 ARG USER_ID
 ARG GROUP_ID

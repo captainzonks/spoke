@@ -2,10 +2,17 @@
 
 <!--
 ==============================================================================
+external_modules.md - Spoke external module contract
+==============================================================================
 Description: How Spoke handles externally-managed repos
 Author: Matt Barham
 Created: 2026-02-14
-Version: 1.0.0
+Modified: 2026-04-22
+Version: 1.0.1
+==============================================================================
+Document Type: Reference
+Audience: Module Developer
+Status: Final
 ==============================================================================
 -->
 

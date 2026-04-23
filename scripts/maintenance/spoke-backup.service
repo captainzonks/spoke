@@ -1,3 +1,17 @@
+# ==============================================================================
+# SPOKE - CONFIG BACKUP SERVICE
+# ==============================================================================
+# Description: systemd user service — runs spoke_backup.sh
+# Author: Matt Barham
+# Created: 2026-04-06
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: systemd unit (service)
+# Component: Spoke / maintenance (backup)
+# ==============================================================================
+
 [Unit]
 Description=Spoke Config Backup
 Documentation=https://github.com/captainzonks/spoke

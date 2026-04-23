@@ -4,7 +4,12 @@
 # Description: Orchestrator for hub services and pluggable modules
 # Author: Matt Barham
 # Created: 2026-02-12
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Makefile
+# Component: Spoke hub orchestrator
 # ==============================================================================
 
 .DEFAULT_GOAL := help

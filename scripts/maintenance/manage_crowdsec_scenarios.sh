@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# MANAGE CROWDSEC SCENARIOS - CrowdSec scenario management script
+# SPOKE - MANAGE CROWDSEC SCENARIOS
 # ==============================================================================
 # Description: Manage CrowdSec scenarios, check alerts, and debug false positives
 # Author: Matt Barham
 # Created: 2025-08-06
-# Modified: 2026-02-19
-# Version: 2.0.0
+# Modified: 2026-04-22
+# Version: 2.0.1
+# Host: Your Server
 # ==============================================================================
-# Security Level: MEDIUM
-# Contains Secrets: NO
-# Read-only: NO
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (crowdsec admin)
+# Security Level: MEDIUM - Mutates CrowdSec runtime (scenarios, decisions)
 # ==============================================================================
 # Dependencies:
 #   - docker and docker-compose

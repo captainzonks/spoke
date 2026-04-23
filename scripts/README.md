@@ -1,5 +1,21 @@
 # Spoke Scripts
 
+<!--
+==============================================================================
+README.md - Spoke scripts documentation
+==============================================================================
+Description: Module lifecycle + routine maintenance scripts for Spoke
+Author: Matt Barham
+Created: 2026-02-12
+Modified: 2026-04-22
+Version: 1.0.1
+==============================================================================
+Document Type: Reference
+Audience: Developer
+Status: Final
+==============================================================================
+-->
+
 ## Overview
 
 Scripts for managing Spoke modules and performing routine maintenance.

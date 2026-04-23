@@ -1,11 +1,20 @@
 #!/bin/sh
-set -e
+# ==============================================================================
+# SPOKE HUB - TRAEFIK ENTRYPOINT
+# ==============================================================================
+# Description: Validates dependencies before starting Traefik to prevent
+#              plugin loading failures (network, socket-proxy, CrowdSec LAPI)
+# Author: Matt Barham
+# Created: 2026-02-12
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (POSIX sh)
+# Component: spoke hub / service: traefik
+# ==============================================================================
 
-# ============================================================================
-# TRAEFIK READINESS CHECKS
-# ============================================================================
-# Validates dependencies before starting Traefik to prevent plugin failures
-# ============================================================================
+set -e
 
 echo "========================================"
 echo "TRAEFIK READINESS CHECKS"

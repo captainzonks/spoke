@@ -4,8 +4,12 @@
 # Description: TLS security options (cipher suites, curve preferences)
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-02-12
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Traefik Dynamic Config (tls options)
+# Component: spoke hub / service: traefik
 # ==============================================================================
 
 tls:

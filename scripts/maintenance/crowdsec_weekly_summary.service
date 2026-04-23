@@ -1,3 +1,17 @@
+# ==============================================================================
+# SPOKE - CROWDSEC WEEKLY SUMMARY SERVICE
+# ==============================================================================
+# Description: systemd user service — runs crowdsec_weekly_summary.sh
+# Author: Matt Barham
+# Created: 2026-03-31
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: systemd unit (service)
+# Component: Spoke / maintenance
+# ==============================================================================
+
 [Unit]
 Description=CrowdSec Weekly Threat Summary Email
 

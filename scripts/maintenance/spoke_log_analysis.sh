@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# SPOKE LOG ANALYSIS - AI-TRIAGED DAILY LOG REPORT
+# SPOKE - LOG ANALYSIS (AI-TRIAGED DAILY REPORT)
 # ==============================================================================
 # Description: Query Loki for errors/warnings, analyze with Claude Code,
 #              and email a structured severity-triaged report
 # Author: Matt Barham
 # Created: 2026-03-28
-# Modified: 2026-03-28
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (log analysis)
 # ==============================================================================
 # Dependencies:
 #   - Loki container running on Docker network (monitoring module)

@@ -1,3 +1,17 @@
+# ==============================================================================
+# SPOKE - DUCKDNS UPDATER SERVICE
+# ==============================================================================
+# Description: systemd service — runs update_duckdns.sh to refresh DDNS record
+# Author: Matt Barham
+# Created: 2026-03-23
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: systemd unit (service)
+# Component: Spoke / maintenance (DDNS)
+# ==============================================================================
+
 [Unit]
 Description=Update DuckDNS DDNS record with current public IP
 Requires=network-online.target

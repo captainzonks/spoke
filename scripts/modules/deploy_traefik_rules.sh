@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# DEPLOY TRAEFIK RULES - Copy module Traefik rules to hub rules directory
+# SPOKE - DEPLOY MODULE TRAEFIK RULES
 # ==============================================================================
 # Description: Copies a module's traefik/ directory contents to appdata/traefik/rules/
 #              with a mod_ prefix to prevent naming collisions
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-02-12
-# Version: 1.2.0
+# Modified: 2026-04-22
+# Version: 1.2.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / module traefik rules deployer
 # Usage: deploy_traefik_rules.sh MODULE_NAME
 # ==============================================================================
 

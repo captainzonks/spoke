@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# SPOKE CONFIG BACKUP
+# SPOKE - CONFIG BACKUP
 # ==============================================================================
 # Description: Backup critical Spoke configuration to a local restic repository
 # Author: Matt Barham
 # Created: 2026-04-06
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (backup)
 # ==============================================================================
 # Usage: ./spoke_backup.sh [--dry-run] [--verify]
 #

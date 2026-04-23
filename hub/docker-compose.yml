@@ -4,20 +4,22 @@
 # Description: Core hub services - proxy, auth, security, database, cache
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-06
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Component: spoke hub
+# Config Sources: shared/env/base.env + shared/env/hub.env → hub/.env (generated)
+# Security: non-root (UID:PUID/GID:DGID), secrets via /run/secrets/, caps dropped
 # ==============================================================================
 # Services: socket-proxy, traefik, authentik, authentik-worker,
 #           crowdsec, postgres-hub, redis, sablier
-# Config Sources: shared/env/base.env + shared/env/hub.env
-# Security: non-root (UID:PUID/GID:DGID), secrets via /run/secrets/, caps dropped
-# ==============================================================================
-# Container Images:
-#   See shared/env/hub.env for complete image paths and versions
+# Container Images: See shared/env/hub.env for complete image paths and versions
 # Networks:
 #   - soxy (192.168.33.0/24) - socket proxy isolated network
 #   - troxy (192.168.35.0/24) - main application network
 #   - auxy (192.168.38.0/24) - authentik auxiliary network
+# External Integrations: [x] Traefik routing  [x] Authentik forward auth
 # ==============================================================================
 
 name: spoke-hub

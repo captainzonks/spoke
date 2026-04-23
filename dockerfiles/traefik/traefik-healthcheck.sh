@@ -1,12 +1,21 @@
 #!/bin/sh
-# ============================================================================
-# TRAEFIK HEALTHCHECK
-# ============================================================================
-# Validates Traefik is ready:
-#   1. Ping endpoint responds
-#   2. Plugins registered in API rawdata (crowdsec-bouncer, sablier, htransformation)
-# Returns: 0 if healthy, 1 if unhealthy
-# ============================================================================
+# ==============================================================================
+# SPOKE HUB - TRAEFIK HEALTHCHECK
+# ==============================================================================
+# Description: Validates Traefik is ready:
+#              1. Ping endpoint responds
+#              2. Plugins registered in API rawdata
+#                 (crowdsec-bouncer, sablier, htransformation)
+#              Returns: 0 if healthy, 1 if unhealthy
+# Author: Matt Barham
+# Created: 2026-02-12
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (POSIX sh)
+# Component: spoke hub / service: traefik
+# ==============================================================================
 
 set -e
 

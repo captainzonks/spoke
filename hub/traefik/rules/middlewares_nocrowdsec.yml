@@ -1,12 +1,15 @@
 # ==============================================================================
-# SPOKE HUB - TRAEFIK MIDDLEWARE CONFIGURATION (NO CROWDSEC)
+# SPOKE HUB - TRAEFIK MIDDLEWARES (NO CROWDSEC)
 # ==============================================================================
 # Description: Middleware chains without CrowdSec — used when CROWDSEC_ENABLED=false
 # Author: Matt Barham
 # Created: 2026-03-15
-# Modified: 2026-03-15
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
 # ==============================================================================
+# Type: Traefik Dynamic Config (middlewares)
+# Component: spoke hub / service: traefik
 # Note: deploy_hub_rules.sh deploys this file as hub_middlewares.yml when
 #       CROWDSEC_ENABLED=false. Do not deploy both files simultaneously.
 # ==============================================================================

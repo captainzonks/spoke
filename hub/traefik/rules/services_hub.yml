@@ -1,15 +1,15 @@
 # ==============================================================================
-# SERVICES_HUB - TRAEFIK HUB SERVICE DEFINITIONS
+# SPOKE HUB - TRAEFIK SERVICES (HUB SERVICES)
 # ==============================================================================
 # Description: Load balancer service configurations for hub services
 # Author: Matt Barham
 # Created: 2026-02-15
-# Modified: 2026-02-15
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
 # ==============================================================================
-# Security Level: MEDIUM
-# Contains Secrets: NO
-# ==============================================================================
+# Type: Traefik Dynamic Config (services)
+# Component: spoke hub / service: traefik
 # Related Documentation:
 #   - Traefik Services: https://doc.traefik.io/traefik/routing/services/
 # Dependencies:

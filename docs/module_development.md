@@ -7,7 +7,8 @@ module_development.md - How to create a Spoke module
 Description: Complete guide for developing official and external Spoke modules
 Author: Matt Barham
 Created: 2026-03-23
-Version: 1.0.0
+Modified: 2026-04-22
+Version: 1.0.1
 ==============================================================================
 Document Type: Guide
 Audience: Module Developer

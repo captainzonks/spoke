@@ -1,7 +1,21 @@
 # Spoke Permission Standards
 
-**Date:** 2025-11-05
-**Purpose:** Standardized Unix permissions across Spoke directories
+<!--
+==============================================================================
+permission_standards.md - Unix permission standards for Spoke
+==============================================================================
+Description: Standardized Unix permissions across Spoke directories
+Author: Matt Barham
+Created: 2025-11-05
+Modified: 2026-04-22
+Version: 1.0.1
+==============================================================================
+Document Type: Reference
+Audience: Developer
+Status: Final
+==============================================================================
+-->
+
 **Owner:** your-user (UID 1000)
 **Group:** docker (GID 968)
 

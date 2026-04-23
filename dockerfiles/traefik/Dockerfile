@@ -1,13 +1,16 @@
 # ==============================================================================
-# DOCKERFILE - Traefik Reverse Proxy with Startup Reliability
+# SPOKE HUB - TRAEFIK DOCKERFILE
 # ==============================================================================
 # Description: Custom Traefik build with entrypoint/healthcheck scripts
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-16
+# Modified: 2026-04-22
 # Version: 3.6.13-custom
+# Host: Your Server
 # ==============================================================================
+# Type: Dockerfile
 # Base Image: traefik:v3.6.13
+# Component: spoke hub / service: traefik
 # Security: non-root user execution, plugin readiness validation
 # ==============================================================================
 # Enhancements:

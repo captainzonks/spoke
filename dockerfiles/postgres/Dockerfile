@@ -1,13 +1,16 @@
 # ==============================================================================
-# DOCKERFILE - PostgreSQL with Custom User Mapping
+# SPOKE HUB - POSTGRES DOCKERFILE
 # ==============================================================================
 # Description: PostgreSQL with custom UID/GID for host filesystem permissions
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-16
+# Modified: 2026-04-22
 # Version: 18.3-custom
+# Host: Your Server
 # ==============================================================================
+# Type: Dockerfile
 # Base Image: postgres:18.3
+# Component: spoke hub / service: postgres-hub
 # Security: custom user mapping (remaps from default 999:999)
 # ==============================================================================
 

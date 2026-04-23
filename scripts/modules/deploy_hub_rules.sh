@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# DEPLOY HUB RULES - Copy hub Traefik rules to runtime directory
+# SPOKE - DEPLOY HUB RULES
 # ==============================================================================
 # Description: Copies hub/traefik/rules/ to appdata/traefik/rules/ with hub_ prefix
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-02-12
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke hub / traefik rules deployer
 # ==============================================================================
 
 set -euo pipefail

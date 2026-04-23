@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# PROVISION HUB POSTGRES - Create databases and users for modules
+# SPOKE - PROVISION HUB POSTGRES
 # ==============================================================================
 # Description: Reads hub_postgres section from a module's stack.yml and
 #              provisions databases and users in the hub postgres-hub container
 # Author: Matt Barham
 # Created: 2026-02-13
-# Modified: 2026-02-13
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / hub postgres provisioner
 # Usage: provision_hub_postgres.sh MODULE_NAME
 # ==============================================================================
 

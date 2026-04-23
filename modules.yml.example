@@ -4,7 +4,13 @@
 # Description: Defines which modules to deploy and their site-specific config
 # Author: Matt Barham
 # Created: 2026-02-12
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Template
+# Security Level: MEDIUM - Site topology and secret path mappings (no secrets)
+# Component: Spoke module registry
 # ==============================================================================
 # INSTRUCTIONS:
 #   1. Copy this file to modules.yml

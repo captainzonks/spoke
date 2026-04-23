@@ -1,12 +1,16 @@
 #!/bin/sh
 # ==============================================================================
-# REDIS ENTRYPOINT - Secret-aware wrapper
+# SPOKE HUB - REDIS ENTRYPOINT
 # ==============================================================================
 # Description: Reads redis_password secret and passes requirepass to redis-server
 # Author: Matt Barham
 # Created: 2026-04-06
-# Modified: 2026-04-06
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (POSIX sh)
+# Component: spoke hub / service: redis
 # ==============================================================================
 
 set -e

@@ -2,11 +2,17 @@
 
 <!--
 ==============================================================================
+architecture_decisions.md - Architecture decision records
+==============================================================================
 Description: Key architecture decisions and rationale
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-02-18
-Version: 1.0.0
+Modified: 2026-04-22
+Version: 1.0.1
+==============================================================================
+Document Type: Reference
+Audience: Developer
+Status: Active (living document)
 ==============================================================================
 -->
 

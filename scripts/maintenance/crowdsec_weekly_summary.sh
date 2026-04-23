@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# CROWDSEC WEEKLY THREAT SUMMARY
+# SPOKE - CROWDSEC WEEKLY THREAT SUMMARY
 # ==============================================================================
 # Description: Generate and email weekly summary of CrowdSec threat decisions
 # Author: Matt Barham
 # Created: 2025-12-14
-# Modified: 2026-03-16
-# Version: 2.0.0
+# Modified: 2026-04-22
+# Version: 2.0.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (crowdsec reporter)
 # Purpose: Aggregate CrowdSec decisions from the past week, deduplicate IPs,
 #          and send a single summary email via ProtonMail Bridge
 # ==============================================================================

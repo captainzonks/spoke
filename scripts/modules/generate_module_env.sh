@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# GENERATE MODULE ENV - Merge base.env + module .env.example + overrides
+# SPOKE - GENERATE MODULE ENV
 # ==============================================================================
 # Description: Creates the .env file for a module by merging layers
+#              (base.env + module .env.example + modules.yml overrides)
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-02-12
-# Version: 1.1.0
+# Modified: 2026-04-22
+# Version: 1.1.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / module env generator
 # Usage: generate_module_env.sh MODULE_NAME [--force]
 # Merge order (later wins):
 #   1. shared/env/base.env (instance-wide)

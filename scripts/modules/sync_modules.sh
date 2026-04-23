@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# SYNC MODULES - Clone or pull module repositories
+# SPOKE - SYNC MODULES
 # ==============================================================================
 # Description: Reads modules.yml and clones/pulls enabled module repos
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-02-12
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / module repo sync
 # Usage: sync_modules.sh [MODULE_NAME]
 #   No args: sync all enabled modules
 #   MODULE_NAME: sync only the specified module

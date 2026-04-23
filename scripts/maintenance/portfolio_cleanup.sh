@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# PORTFOLIO DATABASE CLEANUP
+# SPOKE - PORTFOLIO DATABASE CLEANUP
 # ==============================================================================
 # Description: Clean up old form submissions from portfolio database
 # Author: Matt Barham
 # Created: 2026-02-11
-# Modified: 2026-02-19
-# Version: 2.0.0
+# Modified: 2026-04-22
+# Version: 2.0.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (portfolio cleanup)
 # Purpose: Delete form submissions older than 24 hours to keep database clean
 # Schedule: Runs daily via systemd timer
 # ==============================================================================

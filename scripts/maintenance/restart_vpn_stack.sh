@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# VPN STACK RESTART SCRIPT
+# SPOKE - VPN STACK RESTART
 # ==============================================================================
 # Description: Properly restart gluetun and dependent containers
 # Author: Matt Barham (with Claude Code assistance)
 # Created: 2025-12-04
-# Modified: 2026-02-19
-# Version: 2.0.0
+# Modified: 2026-04-22
+# Version: 2.0.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (VPN stack)
 # Purpose: Handle container dependencies correctly when restarting VPN stack
 # Issue: qbittorrent and slskd use gluetun's network namespace - restart order matters
 # ==============================================================================

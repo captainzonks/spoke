@@ -1,3 +1,17 @@
+# ==============================================================================
+# SPOKE - BOOT DEPLOY SERVICE
+# ==============================================================================
+# Description: systemd user service — runs boot_deploy.sh at login
+# Author: Matt Barham
+# Created: 2026-03-23
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: systemd unit (service)
+# Component: Spoke / boot orchestrator
+# ==============================================================================
+
 [Unit]
 Description=Spoke Platform - Ordered Boot Deployment
 Documentation=https://github.com/captainzonks/spoke

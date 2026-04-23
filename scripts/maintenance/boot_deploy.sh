@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# BOOT_DEPLOY.SH
+# SPOKE - BOOT DEPLOY
 # ==============================================================================
 # Description: Ordered Spoke deployment on cold boot
 # Author: Matt Barham
 # Created: 2026-03-11
-# Modified: 2026-03-23
-# Version: 2.0.0
+# Modified: 2026-04-22
+# Version: 2.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / boot orchestrator (systemd user service)
 # ==============================================================================
 # Purpose: Wait for Docker daemon readiness, deploy hub services, wait for
 #          critical hub health, then deploy modules. Designed to run as a

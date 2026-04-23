@@ -1,5 +1,21 @@
 # CrowdSec Integration
 
+<!--
+==============================================================================
+crowdsec.md - CrowdSec integration reference
+==============================================================================
+Description: How CrowdSec integrates with Spoke (behavioral analysis, AppSec WAF)
+Author: Matt Barham
+Created: 2026-02-12
+Modified: 2026-04-22
+Version: 1.0.1
+==============================================================================
+Document Type: Reference
+Audience: Developer
+Status: Final
+==============================================================================
+-->
+
 CrowdSec is an open-source security engine that combines behavioral analysis with
 a crowdsourced threat intelligence network. It detects and blocks malicious
 traffic before it reaches your services.

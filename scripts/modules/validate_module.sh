@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# VALIDATE MODULE - Check module prerequisites before deployment
+# SPOKE - VALIDATE MODULE
 # ==============================================================================
 # Description: Validates networks, secrets, env, and stack.yml for a module
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-02-12
-# Version: 1.1.0
+# Modified: 2026-04-22
+# Version: 1.1.1
+# Host: Your Server
 # ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / module validator
 # Usage: validate_module.sh MODULE_NAME [--post-env]
 # ==============================================================================
 

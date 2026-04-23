@@ -1,3 +1,17 @@
+# ==============================================================================
+# SPOKE - PORTFOLIO CLEANUP SERVICE
+# ==============================================================================
+# Description: systemd user service — runs portfolio_cleanup.sh
+# Author: Matt Barham
+# Created: 2026-03-31
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: systemd unit (service)
+# Component: Spoke / maintenance
+# ==============================================================================
+
 [Unit]
 Description=Portfolio Database Cleanup
 

@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# SECRETS_NEWLINE_CLEANUP.SH
+# SPOKE - SECRETS NEWLINE CLEANUP
 # ==============================================================================
 # Description: Systematically remove trailing newlines from Docker secrets files
 # Author: Matt Barham
 # Created: 2025-09-07
-# Modified: 2026-02-19
-# Version: 2.0.0
+# Modified: 2026-04-22
+# Version: 2.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (secrets hygiene)
+# Security Level: HIGH - Modifies secret files in place
 # ==============================================================================
 # Requirements:
 #   - Bash 4.0+

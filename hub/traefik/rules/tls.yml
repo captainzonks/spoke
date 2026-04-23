@@ -1,15 +1,16 @@
 # ==============================================================================
-# TLS - TRAEFIK TLS CONFIGURATION
+# SPOKE HUB - TRAEFIK TLS CERTIFICATES
 # ==============================================================================
 # Description: TLS certificate configuration for Traefik reverse proxy
 # Author: Matt Barham
 # Created: 2026-02-15
-# Modified: 2026-02-15
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
 # ==============================================================================
-# Security Level: HIGH
-# Contains Secrets: YES (references to certificate files)
-# ==============================================================================
+# Type: Traefik Dynamic Config (tls certificates)
+# Component: spoke hub / service: traefik
+# Security: References certificate files mounted as Docker secrets
 # Related Documentation:
 #   - Traefik TLS: https://doc.traefik.io/traefik/https/tls/
 # Dependencies:

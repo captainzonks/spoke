@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# DUCKDNS DYNAMIC DNS UPDATER
+# SPOKE - DUCKDNS DYNAMIC DNS UPDATER
 # ==============================================================================
 # Description: Update DuckDNS DDNS record with current public IP
 # Author: Matt Barham
 # Created: 2026-03-16
-# Modified: 2026-03-16
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Type: Shell Script (Bash)
+# Component: Spoke / maintenance (DDNS)
 # ==============================================================================
 # Purpose: Reliable DDNS updates for residential IPs using DuckDNS. Reads
 #          credentials from Spoke secrets, validates responses, and retries

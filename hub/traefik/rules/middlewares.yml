@@ -1,12 +1,15 @@
 # ==============================================================================
-# SPOKE HUB - TRAEFIK MIDDLEWARE CONFIGURATION
+# SPOKE HUB - TRAEFIK MIDDLEWARES
 # ==============================================================================
 # Description: Reusable middleware chains and components for the Spoke platform
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-02-12
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
 # ==============================================================================
+# Type: Traefik Dynamic Config (middlewares)
+# Component: spoke hub / service: traefik
 # Note: Module-specific middleware should be defined in module traefik/ dirs
 # ==============================================================================
 

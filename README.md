@@ -1,5 +1,21 @@
 # Spoke
 
+<!--
+==============================================================================
+README.md - Spoke hub documentation
+==============================================================================
+Description: Hub-and-spoke self-hosted infrastructure platform overview
+Author: Matt Barham
+Created: 2026-02-12
+Modified: 2026-04-22
+Version: 1.0.1
+==============================================================================
+Document Type: Reference
+Audience: Developer
+Status: Final
+==============================================================================
+-->
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E21U3S1R)
 
 A modular, open-source hub-and-spoke server platform for self-hosted infrastructure.

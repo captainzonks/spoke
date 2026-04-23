@@ -6,8 +6,12 @@
 #              The depends_on entry activates the crowdsec profile service.
 # Author: Matt Barham
 # Created: 2026-03-15
-# Modified: 2026-03-15
-# Version: 1.0.0
+# Modified: 2026-04-22
+# Version: 1.0.1
+# Host: Your Server
+# ==============================================================================
+# Component: spoke hub (crowdsec overlay)
+# Security: Gates Traefik startup on CrowdSec LAPI readiness
 # ==============================================================================
 # Usage: Applied automatically via Makefile HUB_COMPOSE_FILES when
 #        CROWDSEC_ENABLED=true. Do not apply manually unless CrowdSec is ready.

@@ -206,7 +206,16 @@ traefik/
 └── middlewares_mymodule.yml   # Module-specific middleware (optional)
 ```
 
-During deployment, `deploy_traefik_rules.sh` copies these to `appdata/traefik/rules/` with a `mod_` prefix (e.g., `mod_routers_mymodule.yml`). Traefik auto-detects new files without restart.
+During deployment, `deploy_traefik_rules.sh` (>= 1.3.0) reads each rule YAML, runs `envsubst` against the module's generated `.env`, and writes the result to `appdata/traefik/rules/` with a `mod_` prefix (e.g., `mod_routers_mymodule.yml`). Traefik auto-detects new files without restart.
+
+The substitution allowlist is built from the module `.env` keys only — unrelated `${...}` patterns elsewhere are unaffected. Rule YAMLs without any `${VAR}` placeholders are passed through unchanged, so modules written before 1.3.0 still work.
+
+**Two-stage substitution:**
+
+| Token | Expanded by | When | Source |
+|-------|-------------|------|--------|
+| `${VAR}` | `envsubst` | Deploy (per `deploy_traefik_rules.sh` run) | Module's generated `.env` (overridable via `modules.yml env_overrides`) |
+| `{{ env "VAR" }}` | Traefik | Runtime (per request) | Traefik container's environment (set by the hub) |
 
 **Router example (`traefik/routers_mymodule.yml`):**
 
@@ -214,7 +223,9 @@ During deployment, `deploy_traefik_rules.sh` copies these to `appdata/traefik/ru
 http:
   routers:
     mymodule:
-      rule: "Host(`mymodule.{{ env \"DOMAIN\" }}`)"
+      # ${MYMODULE_SUBDOMAIN} comes from the module .env (overridable per site)
+      # {{ env "DOMAIN" }} comes from the hub at request time
+      rule: "Host(`${MYMODULE_SUBDOMAIN}.{{ env \"DOMAIN\" }}`)"
       entryPoints:
         - websecure
       service: mymodule
@@ -222,6 +233,24 @@ http:
       middlewares:
         - mymodule-headers
 ```
+
+The matching `.env.example` ships the default:
+
+```
+MYMODULE_SUBDOMAIN=mymodule
+```
+
+A site that wants a different prefix overrides it once in `modules.yml`:
+
+```yaml
+modules:
+  mymodule:
+    env_overrides:
+      MYMODULE_SUBDOMAIN: "myname"
+```
+
+After `make deploy MODULE=mymodule`, the deployed rule resolves to
+`Host(\`myname.{{ env "DOMAIN" }}\`)`.
 
 **Service example (`traefik/services_mymodule.yml`):**
 

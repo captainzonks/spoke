@@ -56,6 +56,7 @@ Modules are independent repositories. Enable only the ones you need.
 | monitoring | Grafana, Prometheus, Loki, Telegraf, Dozzle, NUT UPS |
 | database | InfluxDB3, MinIO |
 | plex | Plex Media Server, Tautulli |
+| piped | Piped backend, frontend, ytproxy + module-local Postgres (YouTube alt for LibreTube et al.) |
 | immich | Self-hosted photo management |
 | books | Audiobookshelf, Calibre |
 | music | Navidrome, MusicBrainz Picard |

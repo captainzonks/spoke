@@ -212,3 +212,22 @@ Status: Active (living document)
 **Consequences**:
 - All module-internal networks must include `name:` fields
 - Existing containers may need recreation if network names change
+
+## ADR-014: Envsubst Module Variables into Traefik Rule YAMLs
+
+**Decision**: `deploy_traefik_rules.sh` (>= 1.3.0) sources the module's generated `.env`, builds an allowlist from its keys, and runs `envsubst` over each rule YAML before copying it into `appdata/traefik/rules/`. Rule YAMLs without any `${VAR}` placeholders are passed through unchanged.
+
+**Context**: Spoke's runtime `{{ env "X" }}` Traefik template only sees variables that exist in the Traefik *container's* environment. Module-level variables — defined in the module's `.env.example` and overridable per site via `modules.yml env_overrides` — never reach Traefik through the normal flow. This forced any per-site customisation of router rules (subdomain prefix, path prefix, custom headers) to live as a literal in the module repo, which made site-level rebrands impossible without forking.
+
+The first concrete case was `spoke-piped`: a site wanted `tube.${DOMAIN}` instead of the upstream `piped.${DOMAIN}`, and there was no clean way to express the override without modifying the module repo.
+
+**Rationale**:
+- `envsubst` operates *during deployment*, while the module `.env` is in scope, so module vars cleanly flow into the rule YAMLs the Traefik file provider eventually parses
+- Building the allowlist from the module `.env` keys keeps substitution scoped — only module-level `${VAR}` patterns are touched; hub or unrelated `${...}` strings pass through verbatim
+- Rule YAMLs without placeholders fall through unchanged → fully backwards compatible with all pre-1.3.0 modules
+- Two-stage substitution (`${VAR}` at deploy time, `{{ env "X" }}` at runtime) keeps the boundary between module-level config (shipped per module) and instance-level config (set by the hub) explicit
+
+**Consequences**:
+- Modules can ship generic Traefik defaults (e.g. `Host(\`${MYMODULE_SUBDOMAIN}.{{ env "DOMAIN" }}\`)` with `MYMODULE_SUBDOMAIN=mymodule` in `.env.example`) and let sites override the prefix once in `modules.yml env_overrides`
+- A module variable referenced as `${VAR}` but missing from the module's `.env` (or `.env.example` + `modules.yml`) will be substituted with an empty string → defensive practice is to always declare the default in `.env.example` first
+- `envsubst` must be on PATH; the script falls back to plain `cp` when it isn't, which leaves literal `${VAR}` tokens in the deployed YAML and breaks the route. A future improvement is to log a warning when fallback triggers

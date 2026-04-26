@@ -182,7 +182,7 @@ The full module deployment pipeline (`make deploy MODULE=name`) runs these steps
 2. **Validate** (`validate_module.sh`) — Check stack.yml, required networks exist, secrets present
 3. **Env Generate** (`generate_module_env.sh`) — Merge base.env + .env.example + modules.yml overrides → `.env`
 4. **Hub Postgres** (`provision_hub_postgres.sh`) — Create databases/users if `hub_postgres` declared in stack.yml
-5. **Traefik Deploy** (`deploy_traefik_rules.sh`) — Copy `traefik/*.yml` → `appdata/traefik/rules/mod_{name}_*`
+5. **Traefik Deploy** (`deploy_traefik_rules.sh`) — `envsubst` `${VAR}` placeholders in `traefik/*.yml` against the module's generated `.env`, then copy → `appdata/traefik/rules/mod_{name}_*`
 6. **Traefik Audit** — Cross-reference `@file` references against all deployed definitions
 7. **Compose Up** — `docker compose up -d` with the generated `.env`
 

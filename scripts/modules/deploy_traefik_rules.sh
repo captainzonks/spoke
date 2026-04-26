@@ -6,8 +6,8 @@
 #              with a mod_ prefix to prevent naming collisions
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 1.2.1
+# Modified: 2026-04-26
+# Version: 1.3.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -46,13 +46,33 @@ fi
 
 mkdir -p "${RULES_DIR}"
 
+# If the module has a generated .env, load it + build an allowlist of vars to
+# substitute into rule YAMLs. This lets modules use ${VAR} placeholders for
+# site-specific values (e.g. subdomain prefixes) that get expanded at deploy
+# time. Rule YAMLs without ${VAR} placeholders are copied as-is.
+MODULE_ENV_FILE="${MODULE_DIR}/.env"
+ENVSUBST_VARS=""
+if [[ -f "${MODULE_ENV_FILE}" ]] && command -v envsubst >/dev/null 2>&1; then
+    # shellcheck disable=SC1090
+    set -a; . "${MODULE_ENV_FILE}"; set +a
+    ENVSUBST_VARS=$(grep -E '^[A-Z_][A-Z0-9_]*=' "${MODULE_ENV_FILE}" \
+        | cut -d= -f1 \
+        | sort -u \
+        | sed 's/^/$/' \
+        | tr '\n' ' ')
+fi
+
 # Find all .yml files in the module's traefik directory
 rule_count=0
 while IFS= read -r -d '' rule_file; do
     filename=$(basename "${rule_file}")
     target="mod_${MODULE}_${filename}"
 
-    cp "${rule_file}" "${RULES_DIR}/${target}"
+    if [[ -n "${ENVSUBST_VARS}" ]]; then
+        envsubst "${ENVSUBST_VARS}" < "${rule_file}" > "${RULES_DIR}/${target}"
+    else
+        cp "${rule_file}" "${RULES_DIR}/${target}"
+    fi
     printf "${GREEN}  Deployed: %s -> %s${NC}\n" "${filename}" "${target}"
     rule_count=$((rule_count + 1))
 done < <(find "${MODULE_TRAEFIK_DIR}" -name '*.yml' -print0)

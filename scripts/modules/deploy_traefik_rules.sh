@@ -6,8 +6,8 @@
 #              with a mod_ prefix to prevent naming collisions
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-26
-# Version: 1.3.0
+# Modified: 2026-04-29
+# Version: 1.3.1
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -50,11 +50,42 @@ mkdir -p "${RULES_DIR}"
 # substitute into rule YAMLs. This lets modules use ${VAR} placeholders for
 # site-specific values (e.g. subdomain prefixes) that get expanded at deploy
 # time. Rule YAMLs without ${VAR} placeholders are copied as-is.
+#
+# We deliberately avoid `set -a; . file; set +a` because that interprets values
+# as shell, which:
+#   1. Truncates multi-word values at the first whitespace (KEY=foo bar -> foo).
+#   2. Tries to execute the trailing words, emitting "command not found".
+# load_module_env() parses KEY=VALUE literally and only expands ${VAR} refs
+# against the current environment via envsubst.
+load_module_env() {
+    local file=$1
+    local line key value
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Strip leading whitespace
+        line="${line#"${line%%[![:space:]]*}"}"
+        # Skip blank + comment-only lines
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        # Match optional `export ` prefix + KEY=VALUE
+        if [[ "$line" =~ ^(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            key="${BASH_REMATCH[2]}"
+            value="${BASH_REMATCH[3]}"
+            # Strip surrounding double or single quotes (balanced only)
+            if [[ "$value" =~ ^\"(.*)\"$ ]]; then
+                value="${BASH_REMATCH[1]}"
+            elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
+                value="${BASH_REMATCH[1]}"
+            fi
+            # Expand ${VAR} references using already-exported env
+            value=$(printf '%s' "$value" | envsubst)
+            export "$key=$value"
+        fi
+    done < "$file"
+}
+
 MODULE_ENV_FILE="${MODULE_DIR}/.env"
 ENVSUBST_VARS=""
 if [[ -f "${MODULE_ENV_FILE}" ]] && command -v envsubst >/dev/null 2>&1; then
-    # shellcheck disable=SC1090
-    set -a; . "${MODULE_ENV_FILE}"; set +a
+    load_module_env "${MODULE_ENV_FILE}"
     ENVSUBST_VARS=$(grep -E '^[A-Z_][A-Z0-9_]*=' "${MODULE_ENV_FILE}" \
         | cut -d= -f1 \
         | sort -u \

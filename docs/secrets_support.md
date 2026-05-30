@@ -94,7 +94,7 @@ secrets:
 #### Authentik
 **Support**: Native
 **Format**: `AUTHENTIK_VAR=file:///run/secrets/secret_name`
-**Image**: `ghcr.io/goauthentik/server:2025.12.1`
+**Image**: `ghcr.io/goauthentik/server:2026.5.2`
 
 Authentik uses a unique URI-based format for file references. Must use triple slash `file:///` prefix.
 

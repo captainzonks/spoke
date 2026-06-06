@@ -90,6 +90,12 @@ secrets:
   crowdsec_online_api_password:
     file: ${SECRETS_DIR}/crowdsec/crowdsec_online_api_password
 
+  # MaxMind GeoLite2 (geoipupdate → Authentik geo/ASN enrichment)
+  maxmind_account_id:
+    file: ${SECRETS_DIR}/maxmind/maxmind_account_id
+  maxmind_license_key:
+    file: ${SECRETS_DIR}/maxmind/maxmind_license_key
+
   # TLS certificates — one pair per domain served by this instance
   # Deployers: rename/symlink actual cert files to match these paths
   domain_1_cert:
@@ -670,6 +676,9 @@ services:
     volumes: &auth_vol
       - ${APPDATA_DIR}/authentik/data/:/data/:rw
       - ${APPDATA_DIR}/authentik/custom-templates/:/templates/:rw
+      # GeoIP/ASN enrichment — Authentik defaults to /geoip/GeoLite2-City.mmdb
+      # and /geoip/GeoLite2-ASN.mmdb, so mounting here is enough (no env vars).
+      - ${APPDATA_DIR}/geoip/:/geoip/:ro
       - ${LOCALTIME}:/etc/localtime:ro
 
     tmpfs:
@@ -726,6 +735,47 @@ services:
       - /dev/shm/:rw,size=512m
 
     secrets: *auth_secrets
+
+  #======================================
+  # GEOIPUPDATE - MaxMind GeoLite2 DB refresher (feeds Authentik geo/ASN)
+  #======================================
+  geoipupdate:
+    <<: *log_small
+    image: ${GEOIPUPDATE_IMAGE}
+    hostname: geoipupdate
+    container_name: geoipupdate
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    mem_limit: 64M
+    cpus: 0.25
+    cap_drop:
+      - ALL
+    user: ${PUID}:${DGID}
+
+    networks:
+      troxy:
+        ipv4_address: ${GEOIPUPDATE_IP_T}
+
+    environment:
+      - TZ=${TZ}
+      - GEOIPUPDATE_ACCOUNT_ID_FILE=/run/secrets/maxmind_account_id
+      - GEOIPUPDATE_LICENSE_KEY_FILE=/run/secrets/maxmind_license_key
+      - GEOIPUPDATE_EDITION_IDS=GeoLite2-City GeoLite2-ASN GeoLite2-Country
+      - GEOIPUPDATE_FREQUENCY=72
+
+    volumes:
+      - ${APPDATA_DIR}/geoip/:/usr/share/GeoIP/:rw
+      - ${LOCALTIME}:/etc/localtime:ro
+
+    tmpfs:
+      - /tmp/:rw,size=10m
+
+    secrets:
+      - maxmind_account_id
+      - maxmind_license_key
 
   #======================================
   # SABLIER - On-Demand Container Manager

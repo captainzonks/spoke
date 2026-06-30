@@ -724,6 +724,10 @@ stop-all: ## Bulk: Stop all modules then hub
 	@$(MAKE) hub-stop
 	@echo -e "$(GREEN)All services stopped$(NC)"
 
+.PHONY: safe-shutdown
+safe-shutdown: ## Bulk: Gracefully stop everything (DB-safe, for reboot/maintenance)
+	@$(SPOKE_DIR)/scripts/maintenance/safe_shutdown.sh
+
 #======================================
 # SYSTEM
 #======================================

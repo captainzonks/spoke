@@ -203,6 +203,10 @@ services:
     hostname: postgres-hub
     container_name: postgres-hub
     restart: on-failure
+    # Allow PostgreSQL a clean fast-shutdown checkpoint before SIGKILL. Docker's
+    # 10s default is too short on spinning disks and forces crash recovery (full
+    # data-dir fsync + WAL replay) on the next boot.
+    stop_grace_period: 90s
 
     security_opt:
       - no-new-privileges=true
@@ -266,6 +270,8 @@ services:
     hostname: redis
     container_name: redis
     restart: on-failure
+    # Give Redis time to flush its RDB/AOF to disk on shutdown before SIGKILL.
+    stop_grace_period: 30s
     init: true
 
     security_opt:
@@ -367,6 +373,8 @@ services:
     hostname: crowdsec
     container_name: crowdsec
     restart: on-failure
+    # Give CrowdSec time to flush its local decision/SQLite state on shutdown.
+    stop_grace_period: 30s
     init: true
 
     security_opt:

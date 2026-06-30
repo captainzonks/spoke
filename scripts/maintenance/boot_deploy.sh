@@ -40,6 +40,14 @@ log() {
     printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
 }
 
+# Detect whether postgres-hub is mid crash-recovery (WAL replay / data-dir
+# fsync). Restarting during this throws away progress and starts it over, so
+# the caller should keep waiting rather than restart.
+postgres_recovering() {
+    docker logs postgres-hub --since 30s 2>&1 \
+        | grep -qE 'database system is starting up|syncing data directory|redo (starts|in progress)|recovering'
+}
+
 # Wait for a container to report healthy
 # Usage: wait_healthy <container_name> <max_wait_seconds>
 wait_healthy() {
@@ -127,11 +135,25 @@ hub_healthy=true
 
 log "Waiting for postgres-hub..."
 if ! wait_healthy "postgres-hub" "$HUB_HEALTH_WAIT"; then
-    log "ERROR: postgres-hub failed health check — attempting restart"
-    docker restart postgres-hub
-    if ! wait_healthy "postgres-hub" 120; then
-        log "ERROR: postgres-hub still unhealthy after restart"
-        hub_healthy=false
+    # Crash recovery on a spinning disk can exceed the healthcheck start_period,
+    # flipping the container to 'unhealthy' while it is still legitimately
+    # recovering. Restarting here would discard recovery and start it over, so
+    # extend the wait instead while recovery is still progressing.
+    if postgres_recovering; then
+        log "postgres-hub still in crash recovery — extending wait (no restart)"
+        while postgres_recovering; do
+            if wait_healthy "postgres-hub" "$POLL_INTERVAL"; then break; fi
+        done
+    fi
+    # Re-check; only restart as a last resort if it is genuinely stuck (not
+    # recovering) and still not healthy.
+    if [[ "$(docker inspect postgres-hub --format '{{.State.Health.Status}}' 2>/dev/null)" != "healthy" ]]; then
+        log "ERROR: postgres-hub not healthy and not recovering — attempting restart"
+        docker restart postgres-hub
+        if ! wait_healthy "postgres-hub" "$HUB_HEALTH_WAIT"; then
+            log "ERROR: postgres-hub still unhealthy after restart"
+            hub_healthy=false
+        fi
     fi
 fi
 

@@ -1,0 +1,42 @@
+# ==============================================================================
+# SPOKE - SAFE SHUTDOWN SERVICE
+# ==============================================================================
+# Description: systemd user service — runs safe_shutdown.sh on session stop
+# Author: Matt Barham (with Claude Code assistance)
+# Created: 2026-06-30
+# Modified: 2026-06-30
+# Version: 1.0.0
+# Host: Your Server
+# ==============================================================================
+# Type: systemd unit (service)
+# Component: Spoke / shutdown orchestrator
+# ==============================================================================
+# Behavior: ExecStart is a no-op; RemainAfterExit keeps the unit "active" after
+#           boot so that on logout/reboot/poweroff systemd runs ExecStop, which
+#           gracefully stops all Spoke services (DB-safe). This runs while the
+#           user session — and therefore the Docker daemon — is still available.
+#
+# Install (user scope):
+#   cp spoke_safe_shutdown.service ~/.config/systemd/user/
+#   # edit ExecStop= to the real script path
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now spoke_safe_shutdown.service
+# ==============================================================================
+
+[Unit]
+Description=Spoke Platform - Graceful Shutdown
+Documentation=https://github.com/captainzonks/spoke
+After=default.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/path/to/spoke/scripts/maintenance/safe_shutdown.sh
+TimeoutStopSec=300
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spoke-safe-shutdown
+
+[Install]
+WantedBy=default.target

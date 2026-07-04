@@ -270,7 +270,7 @@ TRAEFIK_TAG=3.6.13-custom
 TRAEFIK_IMAGE=${SPOKE_DIR}/dockerfiles/traefik:${TRAEFIK_TAG}
 
 # Stable third-party images
-REDIS_IMAGE=redis:8.6.2-alpine
+REDIS_IMAGE=redis:8.8.0-alpine
 SOCKET_PROXY_IMAGE=wollomatic/socket-proxy:1.11.4
 
 #==========================================================================

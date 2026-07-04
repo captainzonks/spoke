@@ -94,7 +94,7 @@ secrets:
 #### Authentik
 **Support**: Native
 **Format**: `AUTHENTIK_VAR=file:///run/secrets/secret_name`
-**Image**: `ghcr.io/goauthentik/server:2026.5.2`
+**Image**: `ghcr.io/goauthentik/server:2026.5.3`
 
 Authentik uses a unique URI-based format for file references. Must use triple slash `file:///` prefix.
 
@@ -121,7 +121,7 @@ secrets:
 #### CrowdSec
 **Support**: Custom (Spoke Implementation)
 **Format**: `VAR_FILE=/run/secrets/secret_name`
-**Image**: `rome/crowdsec:v1.7.7-custom`
+**Image**: `rome/crowdsec:v1.7.8-custom`
 
 Spoke's custom build adds `_FILE` support via entrypoint preprocessing.
 
@@ -170,7 +170,7 @@ secrets:
 #### PostgreSQL
 **Support**: Native
 **Format**: `VAR_FILE=/run/secrets/secret_name`
-**Image**: `rome/postgres:18.3-custom` / `rome/postgres:17.7-custom`
+**Image**: `rome/postgres:18.4-custom` / `rome/postgres:17.7-custom`
 
 Official PostgreSQL images support `_FILE` suffix for all `POSTGRES_*` variables.
 
@@ -195,7 +195,7 @@ secrets:
 
 #### Redis
 **Support**: None
-**Image**: `redis:8.6.2-alpine`
+**Image**: `redis:8.8.0-alpine`
 
 Official Redis image doesn't use environment variables for configuration. Uses command-line arguments or redis.conf file.
 

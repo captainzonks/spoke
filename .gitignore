@@ -42,8 +42,9 @@ build/
 .vscode/
 *.code-workspace
 
-# Instance-specific known patterns for log analysis
-scripts/maintenance/log_analysis_known_patterns.md
+# Local / private script inputs (server-specific: known log patterns, etc.).
+# Not for public release. Drop any such file under scripts/local/.
+scripts/local/
 
 # Local / private docs (server-specific: live IP references, runbooks, secret
 # layouts). Not for public release. Drop any such doc under docs/local/.

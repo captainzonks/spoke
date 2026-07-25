@@ -45,6 +45,10 @@ build/
 # Instance-specific known patterns for log analysis
 scripts/maintenance/log_analysis_known_patterns.md
 
+# Local / private docs (server-specific: live IP references, runbooks, secret
+# layouts). Not for public release. Drop any such doc under docs/local/.
+docs/local/
+
 # Log files
 *.log
 logs/

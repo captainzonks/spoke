@@ -201,7 +201,7 @@ query_loki "system_issues" '{job="system"} |~ `(?i)(\berror\b|\bfailed\b|\bcriti
 printf "\n[3/4] Running AI analysis with Claude (%s)...\n" "${CLAUDE_MODEL}"
 
 # Load known patterns context if available
-KNOWN_PATTERNS_FILE="${SCRIPT_DIR}/log_analysis_known_patterns.md"
+KNOWN_PATTERNS_FILE="${SCRIPT_DIR}/../local/log_analysis_known_patterns.md"
 KNOWN_PATTERNS=""
 if [[ -f "${KNOWN_PATTERNS_FILE}" ]]; then
     KNOWN_PATTERNS=$(cat "${KNOWN_PATTERNS_FILE}")

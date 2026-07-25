@@ -1,7 +1,8 @@
 # Known Patterns - Spoke Log Analysis
 # ==============================================================================
 # This file provides institutional knowledge to the AI analysis model.
-# Copy to `log_analysis_known_patterns.md` (same directory) and customize
+# Copy to `../local/log_analysis_known_patterns.md` (the gitignored
+# scripts/local/ directory) and customize
 # for your instance. The analysis script loads it automatically if present.
 #
 # Format: document each known pattern with a heading, description, and

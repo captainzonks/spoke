@@ -4,8 +4,8 @@
 # Description: Core hub services - proxy, auth, security, database, cache
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-08-06
+# Version: 1.0.2
 # Host: Your Server
 # ==============================================================================
 # Component: spoke hub
@@ -790,7 +790,7 @@ services:
   #======================================
   sablier:
     <<: [*ssl, *log_small]
-    image: sablierapp/sablier:1.11.1
+    image: sablierapp/sablier:1.16.1
     hostname: sablier
     container_name: sablier
     restart: on-failure

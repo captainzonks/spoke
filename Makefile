@@ -42,6 +42,11 @@ HUB_COMPOSE_FILES := -f $(HUB_DIR)/docker-compose.yml
 ifeq ($(CROWDSEC_ENABLED),true)
   HUB_COMPOSE_FILES += -f $(HUB_DIR)/docker-compose.crowdsec.yml --profile crowdsec
 endif
+# Site-specific override (gitignored) - explicit -f list above means Compose
+# won't auto-merge it, so append it manually when present
+ifneq (,$(wildcard $(HUB_DIR)/docker-compose.override.yml))
+  HUB_COMPOSE_FILES += -f $(HUB_DIR)/docker-compose.override.yml
+endif
 
 # Backward compatibility: STACK= aliases to MODULE=
 ifdef STACK

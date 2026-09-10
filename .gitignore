@@ -11,6 +11,10 @@ shared/env/base.env
 shared/env/hub.env
 modules.yml
 
+# Out-of-band tokens not meant for container env merge (never wired into
+# the Makefile's base.env/hub.env pipeline — read directly, not deployed)
+shared/env/claude_tokens.env
+
 # Secrets (passwords, API keys, certificates)
 /secrets/
 /secrets

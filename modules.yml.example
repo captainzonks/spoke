@@ -40,6 +40,14 @@ modules:
     secrets_map:
       grafana_admin_password: "secrets/grafana/grafana_admin_password"
 
+  triage:
+    repo: "https://github.com/captainzonks/spoke-triage.git"
+    ref: "main"
+    enabled: false
+    secrets_map:
+      triage_app_psql_password: "secrets/triage/triage_app_psql_password"
+      anthropic_api_key: "secrets/triage/anthropic_api_key"
+
   power:
     repo: "https://github.com/captainzonks/spoke-power.git"
     ref: "main"

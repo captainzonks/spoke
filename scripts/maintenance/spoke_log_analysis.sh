@@ -23,9 +23,18 @@
 #   --hours N    Look back N hours (default: 24)
 #   --dry-run    Query and analyze but don't send email
 # ==============================================================================
+# DEPRECATED: superseded by the spoke-triage module (Rust, structural
+# redaction before any raw log line leaves the no-egress collector,
+# suppression/verdict tracking, cost accounting, Grafana dashboard). This
+# script is kept working and still callable via `make log-analysis` during
+# the migration, but takes no new features. See spoke-triage's docs/spec.md
+# and README.md for the replacement.
+# ==============================================================================
 
 set -euo pipefail
 IFS=$'\n\t'
+
+echo "WARNING: spoke_log_analysis.sh is deprecated — see spoke-triage (docs/spec.md) for its replacement." >&2
 
 # ==============================================================================
 # CONFIGURATION

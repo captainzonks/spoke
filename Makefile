@@ -752,7 +752,7 @@ status: ## System: Show status of all running Spoke containers
 	done
 
 .PHONY: log-analysis
-log-analysis: ## System: Run AI log analysis (HOURS=N for lookback window, DRY_RUN=true to skip email)
+log-analysis: ## System: [DEPRECATED, see spoke-triage] Run AI log analysis (HOURS=N for lookback window, DRY_RUN=true to skip email)
 	@$(SPOKE_DIR)/scripts/maintenance/spoke_log_analysis.sh \
 		$(if $(HOURS),--hours $(HOURS)) \
 		$(if $(filter true,$(DRY_RUN)),--dry-run)

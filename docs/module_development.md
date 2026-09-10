@@ -7,8 +7,8 @@ module_development.md - How to create a Spoke module
 Description: Complete guide for developing official and external Spoke modules
 Author: Matt Barham
 Created: 2026-03-23
-Modified: 2026-04-22
-Version: 1.0.1
+Modified: 2026-09-10
+Version: 1.1.0
 ==============================================================================
 Document Type: Guide
 Audience: Module Developer
@@ -387,6 +387,24 @@ Follow the structure standards documented in [docker_compose_structure_standards
 - Service separators: `#======` (38 chars)
 - Single-line service comments: `# SERVICE_NAME - Brief description`
 - Environment format: `VAR=${VAR}` (no quotes)
+
+### Architecture Decision Records
+
+Modules keep their own `docs/architecture_decisions.md` (standalone-first —
+see [external_modules.md](external_modules.md)), but ADR numbers are a
+**single sequence shared across `spoke` and every module**, not a per-module
+namespace starting at 001. A new module's first ADR continues from the
+highest ADR number that exists anywhere in the ecosystem at the time it's
+written — check `spoke`'s own `docs/architecture_decisions.md` for its
+current highest number before assigning the module's first one.
+
+This matters because module repos develop independently and don't see each
+other's ADR logs: two modules (or a module and `spoke` itself) can pick the
+same next number in parallel with no signal until someone reads both. If
+that happens, whichever renumbers is the one that hasn't shipped externally
+yet — check git tags / releases, not just merge order, since a module
+released to the public before the collision is caught is harder to
+renumber than one still pre-release.
 
 ## README Template
 

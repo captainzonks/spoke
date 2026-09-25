@@ -1,0 +1,46 @@
+# ==============================================================================
+# SPOKE - GITLEAKS SECRET SCAN
+# ==============================================================================
+# Description: Scans full git history for committed secrets on every push/PR
+# Author: Matt Barham
+# Created: 2026-09-25
+# Modified: 2026-09-25
+# Version: 1.0.0
+# Host: Your Server
+# ==============================================================================
+# Type: GitHub Actions workflow
+# Component: CI / security
+# Documentation:
+#   - https://github.com/gitleaks/gitleaks#docker
+# ==============================================================================
+
+name: gitleaks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "${GITHUB_WORKSPACE}:/repo:ro" \
+            -e GIT_CONFIG_COUNT=1 \
+            -e GIT_CONFIG_KEY_0=safe.directory \
+            -e GIT_CONFIG_VALUE_0=/repo \
+            ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git /repo --redact --no-banner --verbose --exit-code 1

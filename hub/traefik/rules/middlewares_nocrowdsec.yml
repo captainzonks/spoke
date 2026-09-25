@@ -4,8 +4,8 @@
 # Description: Middleware chains without CrowdSec — used when CROWDSEC_ENABLED=false
 # Author: Matt Barham
 # Created: 2026-03-15
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-09-25
+# Version: 1.0.2
 # Host: Your Server
 # ==============================================================================
 # Type: Traefik Dynamic Config (middlewares)
@@ -115,14 +115,6 @@ http:
           - real-ip
           - authentik
 
-    chain-agent-api:
-      chain:
-        middlewares:
-          - rate-limit-api
-          - secure-headers
-          - real-ip
-          - basic-auth-agent
-
     chain-authentik-cors:
       chain:
         middlewares:
@@ -162,11 +154,6 @@ http:
       basicAuth:
         usersFile: '{{ env "HTPASSWD_FILE" }}'
         realm: "Spoke"
-
-    basic-auth-agent:
-      basicAuth:
-        usersFile: '{{ env "AGENT_HTPASSWD_FILE" }}'
-        realm: "Spoke Agent API"
 
     authentik:
       forwardAuth:

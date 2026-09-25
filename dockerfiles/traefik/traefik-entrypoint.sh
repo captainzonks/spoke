@@ -6,8 +6,8 @@
 #              plugin loading failures (network, socket-proxy, CrowdSec LAPI)
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-09-25
+# Version: 1.0.2
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (POSIX sh)
@@ -132,11 +132,6 @@ fi
 if [ -f "/run/secrets/basic_auth_credentials" ]; then
   HTPASSWD_FILE="/run/secrets/basic_auth_credentials"
   export HTPASSWD_FILE
-fi
-
-if [ -f "/run/secrets/agent_htpasswd_credentials" ]; then
-  AGENT_HTPASSWD_FILE="/run/secrets/agent_htpasswd_credentials"
-  export AGENT_HTPASSWD_FILE
 fi
 
 # Execute the Traefik binary

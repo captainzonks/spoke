@@ -4,8 +4,8 @@
 # Description: Core hub services - proxy, auth, security, database, cache
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-08-06
-# Version: 1.0.2
+# Modified: 2026-09-25
+# Version: 1.0.3
 # Host: Your Server
 # ==============================================================================
 # Component: spoke hub
@@ -79,8 +79,6 @@ secrets:
   # Traefik
   basic_auth_credentials:
     file: ${SECRETS_DIR}/traefik/basic_auth_credentials
-  agent_htpasswd_credentials:
-    file: ${SECRETS_DIR}/traefik/agent_htpasswd_credentials
 
   # CrowdSec
   crowdsec_lapi_key:
@@ -602,7 +600,6 @@ services:
 
     secrets:
       - basic_auth_credentials
-      - agent_htpasswd_credentials
       - crowdsec_lapi_key
       - redis_password
       - domain_1_cert

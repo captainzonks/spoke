@@ -5,7 +5,7 @@
 # Author: Matt Barham
 # Created: 2026-02-12
 # Modified: 2026-09-25
-# Version: 1.0.2
+# Version: 1.0.3
 # Host: Your Server
 # ==============================================================================
 # Type: Traefik Dynamic Config (middlewares)
@@ -169,6 +169,11 @@ http:
       forwardAuth:
         address: "http://authentik:9000/outpost.goauthentik.io/auth/traefik"
         trustForwardHeader: true
+        # Cap the auth server's response body (1 MiB). Authentik's forward-auth
+        # replies are empty 200s or small 302/401 bodies; unset = unlimited
+        # (Traefik 3.7 logs a DoS warning per router). Over the cap -> 401.
+        # https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/forwardauth/
+        maxResponseBodySize: 1048576
         authResponseHeaders:
           - X-authentik-username
           - X-authentik-groups

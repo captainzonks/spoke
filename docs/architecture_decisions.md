@@ -278,5 +278,6 @@ The first concrete case was `spoke-piped`: a site wanted `tube.${DOMAIN}` instea
 **Consequences**:
 - A new service that needs Docker write access must carry its own `socket-proxy.allow.*` labels and be on `soxy`; adding it to `hub.env` has no effect. Write calls from unlabeled clients now get `403 Forbidden` and are logged by socket-proxy as `blocked request` (`path not allowed`).
 - If Rome ever deploys a Docker-managed Authentik outpost, authentik-worker will need a label granting `containers/create`, start/stop and delete, which re-opens the host-root path for that one container. Consider a dedicated proxy instance at that point.
+- A client with a label allowlist must be left out of `SP_ALLOWFROM`. socket-proxy registers label allowlists from the Docker `start` event, which on Rome was observed arriving about 5 seconds after Sablier started; Sablier's startup `stop` calls in that window matched the read-only default and were refused. A request from an IP outside `SP_ALLOWFROM` instead triggers a synchronous label refresh, so `SP_ALLOWFROM` is the `soxy` /24 minus `SABLIER_IP_S`.
 - A Sablier upgrade that starts using another endpoint (for example `pause`) will fail visibly with blocked requests rather than silently; review Sablier's release notes before upgrading.
 

@@ -4,8 +4,8 @@
 # Description: Defines which modules to deploy and their site-specific config
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-09-26
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Template
@@ -17,6 +17,19 @@
 #   2. Update repo URLs, IPs, and secrets_map for your deployment
 #   3. Set enabled: false for modules you don't want
 #   4. Never commit modules.yml (it's gitignored)
+#
+# MODULE ORDER MATTERS:
+#   boot_deploy.sh deploys modules in the key order below, not alphabetically.
+#   Compose `depends_on` cannot cross module boundaries, so a module whose
+#   services consume another module's services must be listed AFTER it.
+#   Known consumers: monitoring -> database (loki and prometheus store chunks
+#   in minio, telegraf writes influxdb3, grafana reads victoria-metrics).
+#
+# OPTIONAL PER-MODULE KEYS:
+#   boot_deploy: false   Skip this module during boot_deploy.sh. For modules
+#                        driven entirely by their own systemd timer, where a
+#                        deploy at boot just burns a scheduled cycle. Absent
+#                        key means true.
 # ==============================================================================
 
 platform:
@@ -29,6 +42,13 @@ instance:
 
 modules:
   # --- Infrastructure Modules ---
+
+  # database first: monitoring's loki, prometheus, telegraf and grafana all
+  # read or write services defined here.
+  database:
+    repo: "https://github.com/captainzonks/spoke-database.git"
+    ref: "main"
+    enabled: false
 
   monitoring:
     repo: "https://github.com/captainzonks/spoke-monitoring.git"
@@ -44,17 +64,15 @@ modules:
     repo: "https://github.com/captainzonks/spoke-triage.git"
     ref: "main"
     enabled: false
+    # Batch job on its own systemd timer. Deploying it at boot starts a
+    # collector run whose window the next timed run supersedes.
+    boot_deploy: false
     secrets_map:
       triage_app_psql_password: "secrets/triage/triage_app_psql_password"
       anthropic_api_key: "secrets/triage/anthropic_api_key"
 
   power:
     repo: "https://github.com/captainzonks/spoke-power.git"
-    ref: "main"
-    enabled: false
-
-  database:
-    repo: "https://github.com/captainzonks/spoke-database.git"
     ref: "main"
     enabled: false
 

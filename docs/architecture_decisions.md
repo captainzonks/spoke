@@ -7,8 +7,8 @@ architecture_decisions.md - Architecture decision records
 Description: Key architecture decisions and rationale
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-04-22
-Version: 1.0.1
+Modified: 2026-09-26
+Version: 1.0.2
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -231,3 +231,29 @@ The first concrete case was `spoke-piped`: a site wanted `tube.${DOMAIN}` instea
 - Modules can ship generic Traefik defaults (e.g. `Host(\`${MYMODULE_SUBDOMAIN}.{{ env "DOMAIN" }}\`)` with `MYMODULE_SUBDOMAIN=mymodule` in `.env.example`) and let sites override the prefix once in `modules.yml env_overrides`
 - A module variable referenced as `${VAR}` but missing from the module's `.env` (or `.env.example` + `modules.yml`) will be substituted with an empty string → defensive practice is to always declare the default in `.env.example` first
 - `envsubst` must be on PATH; the script falls back to plain `cp` when it isn't, which leaves literal `${VAR}` tokens in the deployed YAML and breaks the route. A future improvement is to log a warning when fallback triggers
+
+## ADR-021: No Deploy CI on a Single Node
+
+**Decision**: Spoke has no build-and-deploy CI. Changes are promoted to the running deployment by hand: merge in the hub or module repo, pull into the deployed instance (`git pull` for the hub, `make module-sync MODULE=<name>` for modules), then run the Makefile targets that wrap `docker compose` (`make hub-deploy` / `hub-rebuild`, `make deploy` / `rebuild` / `recreate MODULE=<name>`). CI jobs that only test or scan code on GitHub-hosted runners are allowed, because they deploy nothing and never touch the host.
+
+**Context**: A Jenkins plus Git build-and-deploy pipeline was evaluated and rejected. The deployment is a single node. The hub's `socket-proxy` (`wollomatic/socket-proxy`) is the only container that mounts `/var/run/docker.sock`; every other container that needs the Docker API reaches it over the `soxy` network, and the proxy only forwards requests that match its per-verb path allowlists (`SP_ALLOW_GET`, `SP_ALLOW_POST`, `SP_ALLOW_PUT`, `SP_ALLOW_DELETE` in `hub.env`; `CONNECT`, `TRACE` and `OPTIONS` are denied outright). Those allowlists cover inspection and container lifecycle calls, not image builds (`/build`) or pulls (`/images/create`). The hub also now runs `.github/workflows/gitleaks.yml`, a scan-only job, so this record has to separate deploy CI (rejected) from test and scan CI (allowed).
+
+**Rationale**:
+- A build-and-deploy runner on this node needs to build images and restart services, which means the Docker API calls the socket-proxy allowlists exist to withhold. Granting them to a runner would reintroduce, for one more long-running service, the privilege the socket-proxy architecture was built to deny.
+- A deploy runner hosted on the node it deploys to is circular: it can't reliably restart the stack it lives inside.
+- With one node, the options were to weaken the security model or to accept manual promotion. Manual promotion keeps the security model intact.
+- Test and scan jobs on GitHub-hosted runners are a different case: the runners are ephemeral, hold no deployment credentials, and have no path to the host or its Docker socket. `spoke-triage` ADR-019 ("Test-Only CI, No Deploy CI") applies the same distinction to that module's `ci.yml`.
+
+**Alternatives Considered**:
+- **Jenkins or a self-hosted GitHub Actions runner on the host**: rejected. Either needs direct Docker socket access (or a proxy allowlist broad enough to be equivalent) and has the circular-restart problem above.
+- **A runner restricted by a scoped socket-proxy allowlist**: rejected. Deploying requires at least `/build` or `/images/create` plus container create and restart. Container create with an arbitrary host config (privileged mode, host bind mounts) is effectively root on the host, so a scoped allowlist that still permits deployment is not a meaningful restriction.
+- **Manual promotion**: chosen.
+
+**Consequences**:
+- Every deploy is a deliberate operator action on the host. Nothing reaches the running deployment without someone running the Makefile.
+- The cost is operator time and discipline: no automatic rollout after merge, no automated rollback, and the deployed instance can lag `main` until someone pulls and redeploys. Nothing automatically signals drift between the repo and the deployment.
+- Verification after a deploy (health checks, logs) is manual, using `make health`, `make hub-health` and `make logs`.
+- Test and scan CI (hub `gitleaks.yml`, `spoke-triage` `ci.yml`) stays in scope and may grow, provided it keeps to GitHub-hosted runners, read-only permissions and no deployment credentials.
+
+**Revisit When**:
+- A second node exists. A runner there could deploy to this node over an authenticated, scoped channel without access to this host's Docker socket, and would not be restarting the stack it runs inside.

@@ -8,7 +8,7 @@ Description: Key architecture decisions and rationale
 Author: Matt Barham
 Created: 2026-02-12
 Modified: 2026-09-26
-Version: 1.0.3
+Version: 1.0.4
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -236,7 +236,7 @@ The first concrete case was `spoke-piped`: a site wanted `tube.${DOMAIN}` instea
 
 **Decision**: Spoke has no build-and-deploy CI. Changes are promoted to the running deployment by hand: merge in the hub or module repo, pull into the deployed instance (`git pull` for the hub, `make module-sync MODULE=<name>` for modules), then run the Makefile targets that wrap `docker compose` (`make hub-deploy` / `hub-rebuild`, `make deploy` / `rebuild` / `recreate MODULE=<name>`). CI jobs that only test or scan code on GitHub-hosted runners are allowed, because they deploy nothing and never touch the host.
 
-**Context**: A Jenkins plus Git build-and-deploy pipeline was evaluated and rejected. The deployment is a single node. The hub's `socket-proxy` (`wollomatic/socket-proxy`) is the only container that mounts `/var/run/docker.sock`; every other container that needs the Docker API reaches it over the `soxy` network, and the proxy only forwards requests that match its per-verb path allowlists (`CONNECT`, `TRACE` and `OPTIONS` are denied outright). Since ADR-023 the default allowlist is read-only and write calls are granted per container; at no point have the allowlists included image builds (`/build`) or pulls (`/images/create`). The hub also now runs `.github/workflows/gitleaks.yml`, a scan-only job, so this record has to separate deploy CI (rejected) from test and scan CI (allowed).
+**Context**: A Jenkins plus Git build-and-deploy pipeline was evaluated and rejected. The deployment is a single node. The hub's `socket-proxy` (`wollomatic/socket-proxy`) is the only container that mounts `/var/run/docker.sock`; every other container that needs the Docker API reaches it over the `soxy` network, and the proxy only forwards requests that match its per-verb path allowlists (`CONNECT`, `TRACE` and `OPTIONS` are denied outright). Since ADR-023 the shared proxy is read-only and the one writer (Sablier) has its own narrowly scoped instance; at no point have the allowlists included image builds (`/build`) or pulls (`/images/create`). The hub also now runs `.github/workflows/gitleaks.yml`, a scan-only job, so this record has to separate deploy CI (rejected) from test and scan CI (allowed).
 
 **Rationale**:
 - A build-and-deploy runner on this node needs to build images and restart services, which means the Docker API calls the socket-proxy allowlists exist to withhold. Granting them to a runner would reintroduce, for one more long-running service, the privilege the socket-proxy architecture was built to deny.
@@ -258,26 +258,24 @@ The first concrete case was `spoke-piped`: a site wanted `tube.${DOMAIN}` instea
 **Revisit When**:
 - A second node exists. A runner there could deploy to this node over an authenticated, scoped channel without access to this host's Docker socket, and would not be restarting the stack it runs inside.
 
-## ADR-023: Read-Only Default Socket-Proxy Allowlist, Write Calls Granted Per Container
+## ADR-023: Read-Only Shared Socket Proxy, Dedicated Proxy for the One Writer
 
-**Decision**: The hub `socket-proxy` (`wollomatic/socket-proxy` 1.13.1) applies a read-only default allowlist to every client on the `soxy` network: `SP_ALLOW_GET` and `SP_ALLOW_HEAD` from `hub.env`, with `SP_ALLOW_POST`, `SP_ALLOW_PUT` and `SP_ALLOW_DELETE` fixed to `NONE` in `hub/docker-compose.yml`. A client that needs write calls gets its own allowlist through `socket-proxy.allow.<method>` labels, enabled by `SP_PROXYCONTAINERNAME=socket-proxy`. Today only `sablier` has one: the default GET/HEAD lists plus `POST` to `containers/<name>/(start|stop|wait)`.
+**Decision**: The hub `socket-proxy` (`wollomatic/socket-proxy` 1.13.1) is read-only for every client on the `soxy` network: `SP_ALLOW_GET` and `SP_ALLOW_HEAD` from `hub.env`, with `SP_ALLOW_POST`, `SP_ALLOW_PUT` and `SP_ALLOW_DELETE` fixed to `NONE` in `hub/docker-compose.yml`. The one client that writes, `sablier`, talks to its own instance, `socket-proxy-sablier` (`SPROXY_SABLIER_IP`, 192.168.33.11). That instance accepts connections only from `SABLIER_IP_S/32` and allows the same GET/HEAD lists plus `POST` to `containers/<name>/(start|stop|wait)`.
 
 **Context**: The previous configuration applied one allowlist to the whole `192.168.33.0/24` network, and it included `containers/create`, container start/stop/restart/wait, `containers/*/update`, `DELETE containers/*` and the prune endpoints. Every `soxy` client could therefore create a container, including crowdsec, traefik (internet-facing), telegraf, alloy, both dozzle instances and authentik-worker. `containers/create` accepts an arbitrary host config (privileged mode, host bind mounts, host namespaces), so any one of those services being compromised was a path to root on the host. The `:ro` flag on the socket bind mount does not limit the API. The broad list dated from the repo's initial commit, with no recorded reason for the write verbs.
 
 **Rationale**:
 - Of the eight clients, only Sablier writes. Its Docker provider (v1.16.1 source, `pkg/provider/docker`) calls `ContainerStart`, `ContainerStop` and `ContainerWait` under the default `stop` strategy. `ContainerPause`/`ContainerUnpause` are used only by the `pause` strategy and `ContainerUpdate` only by resource profiles; Rome configures neither. Everything else reads: traefik's Docker provider, crowdsec's Docker acquisition, alloy and dozzle log streaming, telegraf's Docker input, and authentik-worker's service-connection health check. Authentik's only outpost is the embedded one, so no managed outpost container is ever created through the proxy.
-- socket-proxy 1.11 added per-container allowlists set by Docker labels. A label allowlist replaces the default for that container's IP, and the proxy follows Docker events, so the list stays attached to the container across restarts. One proxy with labels is simpler than running a second proxy instance on its own network for Sablier.
-- `NONE` is compiled to `^NONE$`, which no API path can match, so it denies the verb outright. That is the idiom this file already uses for `CONNECT`, `TRACE` and `OPTIONS`. Hardcoding it in the compose file, rather than reading it from `hub.env`, means a site config can't quietly widen the default again; widening requires a label on a named container.
-- Container labels are fixed when a container is created, and no client can create containers any more, so a compromised client cannot give itself a wider allowlist.
+- A second proxy instance makes Sablier's permissions a static property of that instance's environment, with nothing to resolve at request time. Its `SP_ALLOWFROM` is Sablier's single IP, so no other client can reach its write verbs.
+- `NONE` is compiled to `^NONE$`, which no API path can match, so it denies the verb outright. That is the idiom the file already uses for `CONNECT`, `TRACE` and `OPTIONS`. Hardcoding it in the compose file, rather than reading it from `hub.env`, means a site config can't quietly widen the shared proxy again.
 
 **Alternatives Considered**:
 - **Keep one network-wide allowlist and drop only `create`**: rejected. Every client would still be able to stop, restart or delete any container, which is a denial-of-service path from any compromised service.
-- **A second socket-proxy instance for Sablier**: works, but needs another container, network and IP for one client, where a label achieves the same separation.
-- **`SP_ALLOWBINDMOUNTFROM` bind-mount restrictions**: not needed. The upstream README calls it a request filter, not a sandbox (it does not block privileged mode, host namespaces or devices), and with `create` no longer granted there is nothing for it to filter.
+- **Per-container allowlists via Docker labels on the shared proxy** (`SP_PROXYCONTAINERNAME`, socket-proxy ≥ 1.11): deployed first and rolled back the same day. socket-proxy registers a label allowlist when it handles the container's Docker `start` event. On Rome that took between 0.5 and 5 seconds, and Sablier calls `stop` on idle instances within that window of starting, so those calls matched the read-only default and were refused on every Sablier start. Removing Sablier's IP from `SP_ALLOWFROM`, so that its requests take socket-proxy's synchronous-refresh path, was worse: the refresh did not find the just-started container, Sablier's startup ping got `forbidden IP`, and Sablier could not start.
+- **`SP_ALLOWBINDMOUNTFROM` bind-mount restrictions**: not needed. The upstream README calls it a request filter, not a sandbox (it does not block privileged mode, host namespaces or devices), and neither proxy grants `create`.
 
 **Consequences**:
-- A new service that needs Docker write access must carry its own `socket-proxy.allow.*` labels and be on `soxy`; adding it to `hub.env` has no effect. Write calls from unlabeled clients now get `403 Forbidden` and are logged by socket-proxy as `blocked request` (`path not allowed`).
-- If Rome ever deploys a Docker-managed Authentik outpost, authentik-worker will need a label granting `containers/create`, start/stop and delete, which re-opens the host-root path for that one container. Consider a dedicated proxy instance at that point.
-- A client with a label allowlist must be left out of `SP_ALLOWFROM`. socket-proxy registers label allowlists from the Docker `start` event, which on Rome was observed arriving about 5 seconds after Sablier started; Sablier's startup `stop` calls in that window matched the read-only default and were refused. A request from an IP outside `SP_ALLOWFROM` instead triggers a synchronous label refresh, so `SP_ALLOWFROM` is the `soxy` /24 minus `SABLIER_IP_S`.
+- A new service that needs Docker write access gets its own proxy instance scoped to its IP, following `socket-proxy-sablier`; adding write verbs to `hub.env` has no effect. Write calls to the shared proxy get `403 Forbidden` and are logged as `blocked request` (`path not allowed`).
+- One more small container (64 MB limit, read-only filesystem, all capabilities dropped, same image and pin as `socket-proxy`), and 192.168.33.11 reserved on `soxy`.
+- If Rome ever deploys a Docker-managed Authentik outpost, authentik-worker will need `containers/create`, start/stop and delete. Give it a dedicated instance too, and treat that container as host-root-equivalent.
 - A Sablier upgrade that starts using another endpoint (for example `pause`) will fail visibly with blocked requests rather than silently; review Sablier's release notes before upgrading.
-

@@ -4,8 +4,8 @@
 # Description: Core hub services - proxy, auth, security, database, cache
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-09-25
-# Version: 1.0.3
+# Modified: 2026-09-26
+# Version: 1.0.4
 # Host: Your Server
 # ==============================================================================
 # Component: spoke hub
@@ -159,11 +159,15 @@ services:
       - SP_SHUTDOWNGRACETIME=5
       - SP_WATCHDOGINTERVAL=600
       - SP_STOPONWATCHDOG=true
+      # Default allowlist for every soxy client: read-only. Write verbs are
+      # denied here and granted per container via socket-proxy.allow.* labels
+      # (SP_PROXYCONTAINERNAME enables label lookup; see ADR-023).
+      - SP_PROXYCONTAINERNAME=socket-proxy
       - SP_ALLOW_GET=${SP_ALLOW_GET}
       - SP_ALLOW_HEAD=${SP_ALLOW_HEAD}
-      - SP_ALLOW_POST=${SP_ALLOW_POST}
-      - SP_ALLOW_PUT=${SP_ALLOW_PUT}
-      - SP_ALLOW_DELETE=${SP_ALLOW_DELETE}
+      - SP_ALLOW_POST=NONE
+      - SP_ALLOW_PUT=NONE
+      - SP_ALLOW_DELETE=NONE
       - SP_ALLOW_CONNECT=NONE
       - SP_ALLOW_TRACE=NONE
       - SP_ALLOW_OPTIONS=NONE
@@ -825,6 +829,14 @@ services:
     environment:
       - TZ=${TZ}
       - DOCKER_HOST=tcp://${SPROXY_IP}:${SPROXY_PORT}
+
+    # Per-container socket-proxy allowlist (replaces the default for this
+    # container): read-only GET/HEAD plus the three calls the "stop"
+    # strategy makes: ContainerStart, ContainerStop, ContainerWait (ADR-023).
+    labels:
+      - socket-proxy.allow.get=${SP_ALLOW_GET}
+      - socket-proxy.allow.head=${SP_ALLOW_HEAD}
+      - socket-proxy.allow.post=(/v1\.[0-9]{1,3})?/containers/[a-zA-Z0-9_-]+/(start|stop|wait)
 
     tmpfs:
       - /tmp/:rw,size=10m

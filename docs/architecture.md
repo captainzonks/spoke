@@ -7,8 +7,8 @@ architecture.md - Spoke architecture reference
 Description: Complete Spoke architecture reference (living document)
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-03-14
-Version: 1.1.0
+Modified: 2026-09-26
+Version: 1.2.0
 ==============================================================================
 Document Type: Reference
 Audience: Developer, AI Assistant
@@ -185,6 +185,14 @@ The full module deployment pipeline (`make deploy MODULE=name`) runs these steps
 5. **Traefik Deploy** (`deploy_traefik_rules.sh`) — `envsubst` `${VAR}` placeholders in `traefik/*.yml` against the module's generated `.env`, then copy → `appdata/traefik/rules/mod_{name}_*`
 6. **Traefik Audit** — Cross-reference `@file` references against all deployed definitions
 7. **Compose Up** — `docker compose up -d` with the generated `.env`
+
+## Module Deploy Order
+
+`boot_deploy.sh` and `make deploy-all` walk the modules in the key order they appear in `modules.yml`, not alphabetically. Compose `depends_on` is scoped to a single compose project and modules are separate projects, so deploy order is the only way to express a cross-module dependency: a module whose services consume another module's services must be listed **after** it.
+
+The known edge is `monitoring` → `database`: Loki and Prometheus store chunks in MinIO, Telegraf writes to InfluxDB3, and Grafana reads VictoriaMetrics. Listing `monitoring` first leaves Loki retrying a dead S3 endpoint until `database` comes up.
+
+A module can set `boot_deploy: false` to be skipped during `boot_deploy.sh`. This is for batch jobs whose own systemd timer owns their schedule, where a deploy at boot just burns a cycle; it is not a way to defer a slow service. An absent key means true, and skipped modules are logged by name. See ADR-024.
 
 ## Related Documents
 

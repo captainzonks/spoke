@@ -5,8 +5,8 @@
 # Description: Ordered Spoke deployment on cold boot
 # Author: Matt Barham
 # Created: 2026-03-11
-# Modified: 2026-04-22
-# Version: 2.0.1
+# Modified: 2026-09-26
+# Version: 2.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -22,7 +22,12 @@
 #   3. Wait for postgres-hub healthy (WAL recovery can take minutes)
 #   4. Wait for crowdsec healthy (depends on postgres)
 #   5. Wait for traefik healthy (depends on crowdsec)
-#   6. Deploy all enabled modules
+#   6. Deploy enabled modules in modules.yml key order, skipping any
+#      module marked `boot_deploy: false`
+#
+# Module order is the key order in modules.yml, not alphabetical. A module
+# whose services depend on another module must be listed after it — Compose
+# `depends_on` cannot cross module boundaries.
 # ==============================================================================
 
 set -euo pipefail
@@ -212,7 +217,15 @@ log "All critical hub services healthy"
 # ==============================================================================
 log "Deploying all enabled modules..."
 if command -v yq &>/dev/null && [ -f "${SPOKE_DIR}/modules.yml" ]; then
-    for module in $(yq -r '.modules | to_entries[] | select(.value.enabled == true) | .key' "${SPOKE_DIR}/modules.yml"); do
+    # Announce opt-outs before deploying so the boot log shows every enabled
+    # module either deployed or explicitly skipped, never silently absent.
+    for module in $(yq -r '.modules | to_entries[] | select(.value.enabled == true) | select(.value.boot_deploy == false) | .key' "${SPOKE_DIR}/modules.yml"); do
+        log "Skipping ${module} (boot_deploy: false)"
+    done
+
+    # An absent boot_deploy key means true, so existing modules.yml files keep
+    # their current behaviour.
+    for module in $(yq -r '.modules | to_entries[] | select(.value.enabled == true) | select(.value.boot_deploy != false) | .key' "${SPOKE_DIR}/modules.yml"); do
         if [ -d "${SPOKE_DIR}/modules/${module}" ]; then
             log "Deploying module: ${module}"
             make deploy MODULE="$module" 2>&1 || log "WARNING: module ${module} deploy failed"
@@ -222,6 +235,7 @@ if command -v yq &>/dev/null && [ -f "${SPOKE_DIR}/modules.yml" ]; then
     done
 else
     log "WARNING: yq not available or modules.yml missing — deploying available modules"
+    log "WARNING: boot_deploy opt-outs cannot be honoured without yq"
     for module_dir in "${SPOKE_DIR}"/modules/*/; do
         module="$(basename "$module_dir")"
         log "Deploying module: ${module}"

@@ -8,7 +8,7 @@ Description: Key architecture decisions and rationale
 Author: Matt Barham
 Created: 2026-02-12
 Modified: 2026-09-26
-Version: 1.0.4
+Version: 1.0.5
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -279,3 +279,30 @@ The first concrete case was `spoke-piped`: a site wanted `tube.${DOMAIN}` instea
 - One more small container (64 MB limit, read-only filesystem, all capabilities dropped, same image and pin as `socket-proxy`), and 192.168.33.11 reserved on `soxy`.
 - If Rome ever deploys a Docker-managed Authentik outpost, authentik-worker will need `containers/create`, start/stop and delete. Give it a dedicated instance too, and treat that container as host-root-equivalent.
 - A Sablier upgrade that starts using another endpoint (for example `pause`) will fail visibly with blocked requests rather than silently; review Sablier's release notes before upgrading.
+
+## ADR-024: modules.yml Key Order Is Boot Deploy Order; `boot_deploy: false` Opts Out
+
+**Decision**: `boot_deploy.sh` Phase 4 deploys enabled modules in the key order they appear in `modules.yml`, and that order is load-bearing: a module whose services consume another module's services must be listed after it. A module may set `boot_deploy: false` to be skipped at boot entirely; an absent key means true. `modules.yml.example` documents both, lists `database` before `monitoring`, and marks `triage` as `boot_deploy: false`.
+
+**Context**: Rome rebooted on 2026-09-25. `modules.yml` listed `monitoring` first and `database` thirteenth, so Loki started at 23:02:39 UTC pointed at a MinIO that did not start until 23:08:46 UTC. Loki logged 114 `failed to build table names cache` errors against `192.168.35.42:9000` — first `no route to host` while the container was off the bridge, then `connection refused` once it was up but not yet listening — restarted once at 23:09:46 UTC, and recovered. Alloy then dropped three backup-orchestrator batches that Loki rejected as too old. The next morning's triage report raised two HIGH findings recommending a MinIO restart, for a service that had been healthy for hours.
+
+The same boot also deployed `triage` at 17:14:36 MDT, whose collector opened run 26. The 06:02 timer opened run 27 the next morning, and the analyst claimed 27 and abandoned 26 (spoke-triage ADR-020). Run 26's window covered the reboot, so the boot-time run produced nothing and was discarded.
+
+**Rationale**:
+- Compose `depends_on` and `condition: service_healthy` are scoped to one compose project. Modules are separate projects by design (ADR-001), so there is no in-Compose way to express that Loki needs MinIO. Deploy order is the only ordering primitive Spoke has.
+- The dependency is real and one-way: Loki and Prometheus store chunks in MinIO, Telegraf writes InfluxDB3, Grafana reads VictoriaMetrics. Nothing in `database` references a `monitoring` service, so `database` can always be listed first without a cycle.
+- Key order is already how the script iterates; `yq`'s `to_entries` preserves document order. Making the order meaningful costs nothing and needs no new syntax — but it is invisible unless written down, which is what this ADR and the `modules.yml.example` comments are for.
+- `boot_deploy: false` is expressed as an opt-out rather than an opt-in so existing `modules.yml` files keep their behaviour with no edit. The filter is `select(.value.boot_deploy != false)`, and a missing key is `null`, which is not `false`.
+- Skipped modules are logged by name before the deploy loop runs. A module that is enabled but absent from the boot log would otherwise be indistinguishable from a module that failed to deploy.
+
+**Alternatives Considered**:
+- **Retry or healthcheck gate in `monitoring`**: rejected. Loki already retries; the errors are the retries. A gate would move the wait into the monitoring module without fixing the ordering, and would have to hardcode a `database` service name inside `monitoring`, breaking module isolation.
+- **A `depends_on_modules` key with a topological sort**: correct in general, but it adds a dependency graph and cycle detection to a boot script for one edge that a documented order already handles. Revisit if a second cross-module edge appears that ordering cannot express.
+- **Suppress the findings in `known_patterns.md` instead**: rejected as the primary fix. The findings were accurate; the boot race was real and cost roughly six minutes of log ingestion per reboot. A pattern entry teaches the analyst to report boot-window clusters as INFO, which is worth doing, but it is not a substitute for removing the race.
+- **Leave `triage` in the boot deploy**: rejected. It is a batch job whose systemd timer owns its schedule. A boot-time run costs a collector pass over Loki and produces a run the next timed run supersedes.
+
+**Consequences**:
+- Inserting a new module into `modules.yml` is an ordering decision, not an append. The `MODULE ORDER MATTERS` block in `modules.yml.example` names the known consumer edge so it is visible at the point of edit.
+- `make deploy-all` walks the same key order, so the dependency ordering holds there too. It deliberately does **not** honour `boot_deploy: false`: the flag is scoped to unattended boot, and an operator typing `deploy-all` is asking for everything. A module skipped at boot is still deployed by `make deploy-all` and by `make deploy MODULE=name`.
+- The `yq`-less fallback path cannot read `modules.yml` and therefore cannot honour `boot_deploy: false`. It now logs a warning saying so rather than quietly deploying everything.
+- A module marked `boot_deploy: false` will not come up after a reboot until its own timer fires. That is correct for a batch job and wrong for a service; the key must not be used to work around a slow or flapping service.

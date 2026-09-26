@@ -4,8 +4,8 @@
 # Description: Orchestrator for hub services and pluggable modules
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-09-26
+# Version: 1.0.2
 # Host: Your Server
 # ==============================================================================
 # Type: Makefile
@@ -486,7 +486,7 @@ hub-rebuild: validate-hub generate-hub-env ## Hub: Rebuild hub services (NO_CACH
 		CACHE_FLAG="--no-cache"; \
 	fi; \
 	echo -e "$(YELLOW)Rebuilding hub services...$(NC)"; \
-	docker compose $(HUB_COMPOSE_FILES) build $$CACHE_FLAG && \
+	docker compose $(HUB_COMPOSE_FILES) build --pull $$CACHE_FLAG && \
 	docker compose $(HUB_COMPOSE_FILES) up -d --force-recreate
 	@echo -e "$(GREEN)Hub rebuild complete$(NC)"
 
@@ -599,12 +599,12 @@ rebuild: validate-module generate-module-env ## Module: Rebuild module (MODULE=n
 	if [ -n "$(SERVICE)" ]; then \
 		echo -e "$(YELLOW)Rebuilding $(SERVICE) in $(MODULE)...$(NC)"; \
 		cd $(MODULES_DIR)/$(MODULE) && \
-		docker compose build $$CACHE_FLAG $(SERVICE) && \
+		docker compose build --pull $$CACHE_FLAG $(SERVICE) && \
 		docker compose up -d --force-recreate $(SERVICE); \
 	else \
 		echo -e "$(YELLOW)Rebuilding $(MODULE)...$(NC)"; \
 		cd $(MODULES_DIR)/$(MODULE) && \
-		docker compose build $$CACHE_FLAG && \
+		docker compose build --pull $$CACHE_FLAG && \
 		docker compose up -d --force-recreate; \
 	fi
 	@echo -e "$(GREEN)Rebuild complete$(NC)"

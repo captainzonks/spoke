@@ -7,8 +7,8 @@ header_templates_reference.md - Comprehensive header template documentation
 Description: Complete reference guide for all Spoke file header templates
 Author: Matt Barham
 Created: 2025-07-30
-Modified: 2026-01-20
-Version: 2.1.0
+Modified: 2026-09-27
+Version: 2.1.1
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -19,6 +19,8 @@ Status: Final
 ## Overview
 
 This document provides a comprehensive reference for all header templates available in the Spoke file creation system. The enhanced `new_file.sh` script generates standardized headers for various file types, ensuring consistency across all Spoke server infrastructure files.
+
+**The header `Version:` field is the revision of that one file.** Bump it whenever you edit the file, following semver for the file's own content. It is not the repo's release version. Releases are signed `vX.Y.Z` tags with a `CHANGELOG.md` (hub ADR-029), and a release does not rewrite file headers, except `CHANGELOG.md`, whose header tracks the latest release.
 
 ## Table of Contents
 

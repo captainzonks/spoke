@@ -5,8 +5,8 @@
 # Description: Reads modules.yml and clones/pulls enabled module repos
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-09-27
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -14,6 +14,11 @@
 # Usage: sync_modules.sh [MODULE_NAME]
 #   No args: sync all enabled modules
 #   MODULE_NAME: sync only the specified module
+# Refs (modules.yml `ref`, default main):
+#   Branch       checkout + pull, tracking the branch
+#   Tag vX.Y.Z   detached checkout of the release, no pull (ADR-029). Tags are
+#                fetched without --force, so a tag moved on the remote fails
+#                the sync instead of changing the code behind a version.
 # ==============================================================================
 
 set -euo pipefail
@@ -66,13 +71,37 @@ sync_module() {
     local module_dir="${MODULES_DIR}/${name}"
 
     if [[ -d "${module_dir}/.git" ]]; then
-        printf "${BLUE}Pulling %s (%s)...${NC}\n" "${name}" "${ref}"
-        git -C "${module_dir}" fetch origin
-        git -C "${module_dir}" checkout "${ref}" 2>/dev/null || git -C "${module_dir}" checkout -b "${ref}" "origin/${ref}"
-        git -C "${module_dir}" pull origin "${ref}"
+        # Every git step is checked explicitly: bulk sync calls this function
+        # under `|| true`, which turns set -e off for its whole body
+        if ! git -C "${module_dir}" fetch --tags origin; then
+            printf "${RED}ERROR: fetch failed for %s (a moved release tag is refused)${NC}\n" "${name}" >&2
+            return 1
+        fi
+        if git -C "${module_dir}" rev-parse -q --verify "refs/tags/${ref}^{commit}" >/dev/null; then
+            printf "${BLUE}Checking out %s at release %s...${NC}\n" "${name}" "${ref}"
+            if ! git -C "${module_dir}" checkout --quiet --detach "refs/tags/${ref}"; then
+                printf "${RED}ERROR: checkout of %s failed for %s${NC}\n" "${ref}" "${name}" >&2
+                return 1
+            fi
+        else
+            printf "${BLUE}Pulling %s (%s)...${NC}\n" "${name}" "${ref}"
+            if ! git -C "${module_dir}" checkout "${ref}" 2>/dev/null \
+                && ! git -C "${module_dir}" checkout -b "${ref}" "origin/${ref}"; then
+                printf "${RED}ERROR: checkout of %s failed for %s${NC}\n" "${ref}" "${name}" >&2
+                return 1
+            fi
+            if ! git -C "${module_dir}" pull origin "${ref}"; then
+                printf "${RED}ERROR: pull of %s failed for %s${NC}\n" "${ref}" "${name}" >&2
+                return 1
+            fi
+        fi
     else
         printf "${BLUE}Cloning %s from %s (%s)...${NC}\n" "${name}" "${repo}" "${ref}"
-        git clone --branch "${ref}" "${repo}" "${module_dir}"
+        # --branch also accepts a tag, leaving a detached checkout of it
+        if ! git clone --branch "${ref}" "${repo}" "${module_dir}"; then
+            printf "${RED}ERROR: clone of %s (%s) failed${NC}\n" "${name}" "${ref}" >&2
+            return 1
+        fi
     fi
 
     printf "${GREEN}Synced %s${NC}\n" "${name}"

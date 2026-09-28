@@ -7,8 +7,8 @@ module_development.md - How to create a Spoke module
 Description: Complete guide for developing official and external Spoke modules
 Author: Matt Barham
 Created: 2026-03-23
-Modified: 2026-09-10
-Version: 1.1.0
+Modified: 2026-09-27
+Version: 1.2.0
 ==============================================================================
 Document Type: Guide
 Audience: Module Developer
@@ -310,7 +310,7 @@ Every module needs an entry in the deployment's `modules.yml`:
 modules:
   mymodule:
     repo: "git@github.com:captainzonks/spoke-mymodule.git"
-    ref: "main"
+    ref: "v1.0.0"        # a release tag (ADR-029); a branch name tracks that branch
     enabled: true
     env_overrides:
       # Site-specific overrides (optional)
@@ -320,6 +320,18 @@ modules:
 ```
 
 See `modules.yml.example` in the hub repo for the full template with documentation.
+
+## Releases
+
+Modules follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) (hub ADR-029). What counts as MAJOR, MINOR and PATCH for a module is defined in [external_modules.md](external_modules.md#versioning). Releases are cut from the hub:
+
+```bash
+scripts/maintenance/release.sh prepare [--dry-run] /path/to/spoke-mymodule [major|minor|patch|X.Y.Z]
+# merge the release PR once every check is green, then:
+scripts/maintenance/release.sh publish /path/to/spoke-mymodule
+```
+
+`prepare` computes the version from conventional-commit PR titles unless one is given, writes the `CHANGELOG.md` entry, syncs the version fields and opens a signed release PR. `publish` tags the merged release commit with a signed tag and creates the GitHub release. A module's first release needs an explicit version.
 
 ## Deployment Pipeline
 

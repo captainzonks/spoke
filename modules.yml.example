@@ -4,8 +4,8 @@
 # Description: Defines which modules to deploy and their site-specific config
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-09-26
-# Version: 1.1.0
+# Modified: 2026-09-27
+# Version: 1.2.0
 # Host: Your Server
 # ==============================================================================
 # Type: Template
@@ -24,6 +24,13 @@
 #   services consume another module's services must be listed AFTER it.
 #   Known consumers: monitoring -> database (loki and prometheus store chunks
 #   in minio, telegraf writes influxdb3, grafana reads victoria-metrics).
+#
+# REF (release pinning, ADR-029):
+#   ref: "vX.Y.Z"        Check out that release tag (detached, no pull).
+#                        Upgrade by reading the module's CHANGELOG.md, then
+#                        changing ref and running make module-sync.
+#   ref: "main"          Track a branch instead (pulls on every sync). The
+#                        entries below track main until a module is released.
 #
 # OPTIONAL PER-MODULE KEYS:
 #   boot_deploy: false   Skip this module during boot_deploy.sh. For modules

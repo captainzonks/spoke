@@ -7,8 +7,8 @@ external_modules.md - Spoke external module contract
 Description: How Spoke handles externally-managed repos
 Author: Matt Barham
 Created: 2026-02-14
-Modified: 2026-04-22
-Version: 1.0.1
+Modified: 2026-09-27
+Version: 1.1.0
 ==============================================================================
 Document Type: Reference
 Audience: Module Developer
@@ -157,15 +157,49 @@ modules:
       db_password: "secrets/category/secret_file"
 ```
 
+## Versioning
+
+Modules are versioned with [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html), released as signed `vX.Y.Z` tags with a `CHANGELOG.md` ([Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)). Hub ADR-029 has the full policy.
+
+A module's public API, for versioning purposes, is its contract with the deployment:
+
+- variable names in `.env.example`
+- secret names the compose file expects (the `secrets_map` keys)
+- service, container and network names
+- volume and appdata layout
+- hub services and `modules.yml` keys it needs
+
+| Bump | When |
+|------|------|
+| MAJOR | Something in the contract is removed or renamed, or upgrading needs a manual step (data migration, a new secret to create, a `modules.yml` edit) |
+| MINOR | Something is added that existing deployments can ignore: a new service, an optional variable, a feature |
+| PATCH | Fixes, and upstream image bumps that leave the contract unchanged |
+
+Below `1.0.0` a breaking change bumps MINOR.
+
+Version fields inside the repo must equal the release. `scripts/maintenance/release.sh prepare` in the hub sets them all in the release commit:
+
+- `stack.yml` `module.version`
+- `Cargo.toml`, `pyproject.toml` and `package.json` versions, in the repo root and its immediate subdirectories
+- the `.env.example` keys listed on a `# @release-version:` comment, for tags of images the repo builds itself:
+
+  ```bash
+  # @release-version: MYAPP_API_TAG MYAPP_WORKER_TAG
+  MYAPP_API_TAG=1.4.0
+  MYAPP_WORKER_TAG=1.4.0
+  ```
+
+The per-file header `Version:` fields are file revisions and are not tied to releases.
+
 ## modules.yml Entry
 
-Register external modules in `modules.yml`:
+Register external modules in `modules.yml`. Pin `ref` to a release tag; `make module-sync` then checks out exactly that release (detached, no pull). A branch name such as `main` still works and tracks the branch.
 
 ```yaml
 modules:
   module-name:
     repo: "git@github.com:org/repo.git"
-    ref: "main"
+    ref: "v1.2.0"
     enabled: true
     env_overrides:
       PROXY_NETWORK: "troxy"
@@ -184,7 +218,7 @@ make module-sync MODULE=name    # Clone/pull repo to modules/{name}/
 make deploy MODULE=name         # env gen → validate → traefik deploy → compose up
 ```
 
-1. **Sync**: Clones repo to `modules/{name}/` (or pulls latest)
+1. **Sync**: Clones repo to `modules/{name}/`, then checks out the release tag in `ref` (or pulls the branch in `ref`)
 2. **Env Gen**: Merges `base.env` + `.env.example` + `env_overrides` → `.env`
 3. **Validate**: Checks `stack.yml` requirements (networks, hub services, secrets)
 4. **Traefik Deploy**: Copies `traefik/` rules to `appdata/traefik/rules/mod_*`
@@ -195,7 +229,7 @@ make deploy MODULE=name         # env gen → validate → traefik deploy → co
 ### GeneGnome (genetics)
 
 First external module. Characteristics:
-- Public repo with own release lifecycle
+- Public repo with own release lifecycle (semver tags, per ADR-029)
 - Own PostgreSQL 18 instance (not hub postgres)
 - Internal isolated networks (no external access for processor)
 - LUKS-encrypted volumes for data storage

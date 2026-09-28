@@ -1,0 +1,68 @@
+# ==============================================================================
+# CLIFF.TOML - SHARED GIT-CLIFF CHANGELOG CONFIGURATION
+# ==============================================================================
+# Description: Changelog and version-bump rules for the hub and every module
+#              repo, used by scripts/maintenance/release.sh (ADR-029)
+# Author: Matt Barham
+# Created: 2026-09-27
+# Modified: 2026-09-27
+# Version: 1.0.0
+# Host: Your Server
+# ==============================================================================
+# Type: Configuration (git-cliff 2.x)
+# Component: Spoke release tooling
+# ==============================================================================
+# Notes:
+#   - Entries come from conventional-commit subjects on main. Repos squash-merge,
+#     so each entry is a PR title.
+#   - Only user-visible types are listed: feat, fix, refactor, perf, revert.
+#     docs, ci, chore, test, style and build are left out, as is the release
+#     commit itself. A breaking commit (`type!:` or a BREAKING CHANGE footer) is
+#     always listed, whatever its type.
+#   - Sections follow Keep a Changelog 1.1.0 naming. The HTML comments in the
+#     group names only fix the section order; the template strips them.
+# Documentation:
+#   - https://git-cliff.org/docs/configuration
+#   - https://keepachangelog.com/en/1.1.0/
+#   - https://semver.org/spec/v2.0.0.html
+# ==============================================================================
+
+[changelog]
+header = ""
+body = """
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.breaking %}**BREAKING:** {% endif %}{% if commit.scope %}{{ commit.scope }}: {% endif %}{{ commit.message | upper_first }}\
+{% endfor %}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+filter_commits = true
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+sort_commits = "oldest"
+commit_parsers = [
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Added" },
+  { message = "^(refactor|perf)", group = "<!-- 1 -->Changed" },
+  { message = "^revert", group = "<!-- 2 -->Removed" },
+  { message = "^fix", group = "<!-- 3 -->Fixed" },
+  { message = "^(docs|ci|chore|test|style|build)", skip = true },
+]
+
+[bump]
+# feat bumps MINOR and fix bumps PATCH, including below 1.0.0.
+features_always_bump_minor = true
+# Below 1.0.0 a breaking change bumps MINOR, not MAJOR (SemVer item 4 leaves
+# 0.y.z unconstrained; this is the common Cargo convention). From 1.0.0 up it
+# bumps MAJOR.
+breaking_always_bump_major = false
+initial_tag = "v0.1.0"

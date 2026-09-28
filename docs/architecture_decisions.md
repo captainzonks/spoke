@@ -7,8 +7,8 @@ architecture_decisions.md - Architecture decision records
 Description: Key architecture decisions and rationale
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-09-26
-Version: 1.0.5
+Modified: 2026-09-27
+Version: 1.1.0
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -306,3 +306,44 @@ The same boot also deployed `triage` at 17:14:36 MDT, whose collector opened run
 - `make deploy-all` walks the same key order, so the dependency ordering holds there too. It deliberately does **not** honour `boot_deploy: false`: the flag is scoped to unattended boot, and an operator typing `deploy-all` is asking for everything. A module skipped at boot is still deployed by `make deploy-all` and by `make deploy MODULE=name`.
 - The `yq`-less fallback path cannot read `modules.yml` and therefore cannot honour `boot_deploy: false`. It now logs a warning saying so rather than quietly deploying everything.
 - A module marked `boot_deploy: false` will not come up after a reboot until its own timer fires. That is correct for a batch job and wrong for a service; the key must not be used to work around a slow or flapping service.
+
+## ADR-029: Semantic Versioning for the Hub and Every Module, Released from Signed Tags
+
+**Decision**: The hub and every module repo, GeneGnome included, are versioned with [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). A release is a GPG-signed annotated tag `vX.Y.Z` on `main`, a GitHub Release with the same notes, and a `CHANGELOG.md` entry in [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) form. The tag is the source of truth. Every other place that states a release version has to equal it: `Cargo.toml`, `pyproject.toml` and `package.json` versions (repo root and immediate subdirectories), `stack.yml` `module.version`, and the tags of images the repo builds itself, which `.env.example` lists on a `# @release-version:` line. `scripts/maintenance/release.sh` cuts releases in two steps, `prepare` (release PR) and `publish` (tag and GitHub Release), using the shared `cliff.toml`. A deployment pins each module to a release with `ref: vX.Y.Z` in `modules.yml`.
+
+**Context**: On 2026-09-27 none of the 26 repos had a tag or a release. Versions existed in several places and none of them was maintained:
+- `spoke-triage` declared Cargo `0.3.0`, last bumped at `110fc38`. Eight fixes landed after it, including the `Secret` type (spoke-triage ADR-026), the removal of prompt caching (ADR-027) and the collector egress guard (ADR-028), and none of them bumped it. Its image tags in `.env.example` still said `0.1.0`.
+- GeneGnome's `stack.yml` said `1.4.1` while its three crates and its image tags said `1.2.0`.
+- Seven other modules carried a `stack.yml` `module.version` (`1.0.0` in most), unchanged since it was written. `spoke-hoa`'s `pyproject.toml` said `0.1.0`, and `spoke-portfolio`'s form handler crate and OAuth proxy `package.json` said `1.0.0`. The remaining fifteen repos, the hub included, had no version anywhere.
+- The only version fields that were edited were the per-file header `Version:` lines. Those record revisions of one file, not releases of a repo.
+- `sync_modules.sh` ran `git checkout "${ref}"` then `git pull origin "${ref}"`. With a tag as `ref` the checkout would leave a detached HEAD and the pull would fail, so every deployment tracked `main`. The code running on the host was "whatever `main` was at the last `make module-sync`", which is not recorded anywhere.
+
+**Rationale**:
+- **A Compose module's public API is its contract with the deployment**, since that is what an upgrade can break. SemVer needs the public API declared. For a Spoke module it is: the variable names in `.env.example`, the `secrets_map` keys its compose file expects, its service, container and network names, its volume and appdata layout, and the hub services and `modules.yml` keys it needs.
+  - **MAJOR**: something in that contract is removed or renamed, or upgrading needs a manual step (a data migration, a new secret the operator must create, a `modules.yml` edit).
+  - **MINOR**: something is added that existing deployments can ignore: a new service, an optional variable, a feature.
+  - **PATCH**: fixes, and upstream image bumps that leave the contract unchanged. An upstream image bump that needs a migration is MAJOR, whatever the upstream version change was.
+  - For Rust crates and the images built from them, the Cargo meaning of the version applies as well.
+  - Below 1.0.0 (SemVer item 4), a breaking change bumps MINOR, following the Cargo convention; `cliff.toml` sets `breaking_always_bump_major = false` for this.
+- **Signed tags, not an in-repo version file, as the source of truth.** The hub already signs every commit and its rulesets require signatures. A signed annotated tag extends that to the release, and `git verify-tag` can check it. A `VERSION` file would be one more copy to drift. The copies that have to exist (package manifests, `stack.yml`, image tags) are written by `release.sh prepare` in the same commit as the changelog entry, so they cannot drift at a release.
+- **Changelog generated from commits already written.** Every repo uses conventional-commit subjects and squash-merges, so `main` is a list of PR titles typed `feat`, `fix`, `refactor` and so on. [git-cliff](https://git-cliff.org/) turns those into the entry, and `--bumped-version` computes the next version from them (`feat` → MINOR, `fix` → PATCH, `!` or `BREAKING CHANGE` → MAJOR). A version can still be given explicitly, which it must be when a contract change was committed under a type that does not signal it.
+- **Two-step release, because `main` only accepts PRs.** The rulesets block direct pushes to `main`, and the hub rule is that nothing merges until every check is green. `prepare` opens a normal PR from the operator's own account, so the required checks run on it. `publish` runs after the merge, finds the squash-merge commit `chore(release): vX.Y.Z (#N)` on `main`, and tags that commit, not whatever `main` has moved on to.
+- **Pinning to tags applies ADR-021 to module versions.** Promotion is already a deliberate operator action. Pinning makes the promoted version explicit and recorded in `modules.yml`: upgrading a module means changing its `ref` after reading its changelog, then `make module-sync` and a redeploy.
+
+**Alternatives Considered**:
+- **release-please** ([googleapis/release-please-action](https://github.com/googleapis/release-please-action) v5.0.0): rejected for now. It opens release PRs with the workflow's `GITHUB_TOKEN`, and [events created with that token do not start new workflow runs](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow). On repos with required checks (`spoke`, `spoke-triage`) its release PRs would never go green. The workaround is a GitHub App or a fine-grained PAT stored as a repo secret, which is one more long-lived credential to manage. It also creates unsigned lightweight tags.
+- **A `VERSION` file per repo**: rejected. It is another copy of the version, and the tag already exists.
+- **Tag everything `1.0.0` or everything `0.1.0`**: rejected in favour of a baseline that reflects each repo's state: `v1.0.0` for modules running on the host with a settled contract, `v0.1.0` for experimental or disabled modules, and continuing from the existing number where a repo already had one that meant something (`spoke-triage` `v0.4.0`, GeneGnome from its `stack.yml` line).
+- **Header `Version:` fields as the release version**: rejected. They track single files, and a release touches only some files. They stay as file revisions; `header_template_reference.md` says so.
+
+**Consequences**:
+- A repo's first release gets a one-line "Baseline" changelog entry instead of its entire history, unless `release.sh prepare --since REV` names a starting point (`spoke-triage` uses `110fc38`, its last Cargo bump).
+- `docs`, `ci`, `chore`, `test`, `style` and `build` commits are left out of changelogs. A change that matters to operators must be typed `feat`, `fix`, `refactor` or `perf`, or marked breaking, for the changelog to show it.
+- `sync_modules.sh` checks out a tag `ref` detached, with no pull. It fetches with `--tags` and without `--force`, so if a published tag is moved on the remote, the fetch fails and the sync of that module stops, rather than silently deploying different code under the same version.
+- A pinned deployment no longer picks up fixes merged to a module's `main` on the next sync. A fix reaches it only through a release and a `ref` change. That is the intent, and it makes releasing fixes part of the work.
+- A release takes two operator steps with a green PR in between, per repo.
+- `platform.version` at the top of `modules.yml` is the `modules.yml` schema version, not the hub's release version; it is unchanged by this ADR.
+
+**Revisit When**:
+- Release volume makes the two-step manual flow a burden. At that point a GitHub App token would remove the release-please blocker above.
+- A second deployment exists. Tag signatures could then be verified at sync time (`git verify-tag`) against a pinned keyring, and a tag ruleset on `v*` could block deleting or moving a published tag.

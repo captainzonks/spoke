@@ -7,8 +7,8 @@ README.md - Spoke scripts documentation
 Description: Module lifecycle + routine maintenance scripts for Spoke
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-04-22
-Version: 1.0.1
+Modified: 2026-09-27
+Version: 1.1.0
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -39,6 +39,7 @@ scripts/
 │   ├── portfolio_cleanup.sh
 │   ├── portfolio_cleanup.service
 │   ├── portfolio_cleanup.timer
+│   ├── release.sh
 │   ├── restart_vpn_stack.sh
 │   └── secrets_newline_cleanup.sh
 └── README.md
@@ -54,7 +55,7 @@ These are called by the Makefile during module operations. You typically don't r
 | `deploy_traefik_rules.sh` | Deploy module-specific Traefik dynamic rules |
 | `generate_module_env.sh` | Generate merged .env files for modules from base + module vars |
 | `provision_hub_postgres.sh` | Create databases and users in the hub Postgres instance |
-| `sync_modules.sh` | Sync module definitions from `modules.yml` |
+| `sync_modules.sh` | Clone or update module repos per `modules.yml`: a release tag `ref` is checked out detached, a branch `ref` is pulled |
 | `validate_module.sh` | Validate module structure, compose file, and network references |
 
 ## Maintenance Scripts
@@ -72,6 +73,7 @@ These are called by the Makefile during module operations. You typically don't r
 
 | Script | Purpose |
 |--------|---------|
+| `release.sh` | Cut a semver release of the hub or a module repo: `prepare` opens the release PR, `publish` signs the tag and creates the GitHub release (ADR-029, config in `/cliff.toml`) |
 | `restart_vpn_stack.sh` | Stop VPN-dependent containers, restart Gluetun, wait healthy, restart deps |
 | `manage_crowdsec_scenarios.sh` | Interactive CrowdSec management: alerts, decisions, whitelists, simulation |
 | `secrets_newline_cleanup.sh` | Remove trailing newlines from Docker secrets files (with backup + verify) |

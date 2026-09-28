@@ -7,7 +7,7 @@
 # Author: Matt Barham
 # Created: 2026-09-27
 # Modified: 2026-09-27
-# Version: 1.0.0
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -184,7 +184,8 @@ changelog_section() {
     section="$(cd "${repo}" && git-cliff --config "${CLIFF_CONFIG}" --tag "v${version}" \
         --strip all "${range}" 2>/dev/null)"
     [[ -n "${section}" ]] || section="## [${version}] - ${TODAY}"
-    printf '%s\n' "${section}"
+    # git-cliff dates the entry in UTC; use the same local date as everywhere else
+    printf '%s\n' "${section}" | sed -E "1s/^(## \[[^]]+\]) - [0-9]{4}-[0-9]{2}-[0-9]{2}$/\1 - ${TODAY}/"
     if ! grep -q '^- ' <<<"${section}"; then
         printf '\n### Changed\n\n- Maintenance only; no user-visible changes.\n'
     fi
@@ -357,6 +358,18 @@ bump_env_example() {
     cat "${out}" >"${repo}/.env.example"
 }
 
+# Refuse a release that would lower any version field it rewrites, e.g. a
+# stack.yml that already declares a higher version than the one requested.
+check_no_downgrade() {
+    local repo="$1" version="$2" old
+    while IFS= read -r old; do
+        if version_gt "${old}" "${version}"; then
+            die "a version field already says ${old}, higher than ${version}; release ${old} or later"
+        fi
+    done < <(git -C "${repo}" diff -U0 | grep -E '^-[^-]' \
+        | grep -oE '(^|[^0-9.])[0-9]+\.[0-9]+\.[0-9]+([^0-9.]|$)' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+}
+
 #------------------------------------------------------------------------------
 # Commands
 #------------------------------------------------------------------------------
@@ -405,6 +418,7 @@ cmd_prepare() {
     bump_manifests "${repo}" "${version}"
     bump_stack_yml "${repo}" "${version}"
     bump_env_example "${repo}" "${version}"
+    check_no_downgrade "${repo}" "${version}"
 
     git -C "${repo}" add CHANGELOG.md
     git -C "${repo}" add -u

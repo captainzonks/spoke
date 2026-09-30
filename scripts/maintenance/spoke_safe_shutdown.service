@@ -19,13 +19,17 @@
 #           had no ordering against the system docker.service and ran after
 #           the socket was already gone.
 #
-#           Containers stopped here are recorded as stopped, so dockerd does
-#           not auto-restart them on the next boot and spoke-boot-deploy is the
-#           only thing that starts them, in order.
+#           After a stop done here, dockerd does not restore unless-stopped
+#           containers, nor on-failure containers that exited 0, at the next
+#           boot; spoke-boot-deploy starts them in order. On-failure
+#           containers that exit non-zero on SIGTERM (e.g. 143) are still
+#           restored by dockerd; compose up -d is idempotent, so they converge.
 #
-#           Wants= (not Requires=/BindsTo=) on docker.service: a Docker restart
-#           during a package upgrade must NOT trigger ExecStop and take the
-#           whole platform down.
+#           Wants= (not Requires=/BindsTo=) on docker.service: restarting
+#           Docker (e.g. a package upgrade) does NOT trigger ExecStop. Without
+#           live-restore, a Docker restart still stops every container, and
+#           dockerd brings back only those its restart policies select; run
+#           `make deploy-all` afterwards.
 #
 # Install (system scope, replaces the pre-2.0 user unit):
 #   # Old user unit: disable WITHOUT --now. Stopping it runs its ExecStop,

@@ -18,6 +18,16 @@
 #           Docker restart (e.g. a package upgrade) does not stop or re-run
 #           this unit.
 #
+#           Type=exec, not oneshot: multi-user.target is automatically ordered
+#           after the units it wants, so a oneshot that deploys for up to 30
+#           minutes would hold boot at "starting" for that long. With exec the
+#           unit is "active (running)" during the deploy and "inactive (dead)"
+#           after a successful exit; a failed exit is retried (Restart=).
+#
+#           After=spoke-safe-shutdown.service: stop order is the reverse, so
+#           a reboot issued mid-deploy stops this unit first, before
+#           safe_shutdown.sh starts stopping containers.
+#
 # Install (system scope, replaces the pre-2.0 user unit):
 #   systemctl --user disable --now spoke-boot-deploy.service   # old user unit
 #   rm ~/.config/systemd/user/spoke-boot-deploy.service
@@ -33,16 +43,14 @@
 Description=Spoke Platform - Ordered Boot Deployment
 Documentation=https://github.com/captainzonks/spoke
 Wants=docker.service network-online.target
-After=docker.service network-online.target local-fs.target
+After=docker.service network-online.target local-fs.target spoke-safe-shutdown.service
 StartLimitIntervalSec=1800
 StartLimitBurst=3
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+Type=exec
 User=CHANGE_ME
 ExecStart=/path/to/spoke/scripts/maintenance/boot_deploy.sh
-TimeoutStartSec=1800
 Restart=on-failure
 RestartSec=30
 StandardOutput=journal

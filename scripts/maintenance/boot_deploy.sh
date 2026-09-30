@@ -101,7 +101,7 @@ log "Spoke boot deploy starting (SPOKE_DIR=${SPOKE_DIR})"
 # stalled the whole boot deploy indefinitely. Elapsed time is wall-clock
 # (SECONDS), so a slow probe counts against DOCKER_WAIT too.
 docker_wait_start=$SECONDS
-while ! timeout "$DOCKER_PROBE_TIMEOUT" docker info >/dev/null 2>&1; do
+while ! timeout -k 2 "$DOCKER_PROBE_TIMEOUT" docker info >/dev/null 2>&1; do
     elapsed=$((SECONDS - docker_wait_start))
     if [[ $elapsed -ge $DOCKER_WAIT ]]; then
         log "ERROR: Docker daemon not ready after ${DOCKER_WAIT}s"

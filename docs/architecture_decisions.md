@@ -7,8 +7,8 @@ architecture_decisions.md - Architecture decision records
 Description: Key architecture decisions and rationale
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-09-27
-Version: 1.1.0
+Modified: 2026-09-30
+Version: 1.2.0
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -347,3 +347,33 @@ The same boot also deployed `triage` at 17:14:36 MDT, whose collector opened run
 **Revisit When**:
 - Release volume makes the two-step manual flow a burden. At that point a GitHub App token would remove the release-please blocker above.
 - A second deployment exists. Tag signatures could then be verified at sync time (`git verify-tag`) against a pinned keyring, and a tag ruleset on `v*` could block deleting or moving a published tag.
+
+## ADR-030: Boot Deploy and Safe Shutdown Run as System Units Ordered Against docker.service
+
+**Decision**: `spoke-boot-deploy.service` and `spoke-safe-shutdown.service` are systemd system units that run as the deploying user (`User=`), with `Wants=docker.service` and `After=docker.service`. Boot deploy also orders after `network-online.target` and `local-fs.target` and is `WantedBy=multi-user.target`. `boot_deploy.sh` bounds each Docker readiness probe with `timeout 10 docker info` and measures its wait on wall-clock time. Restart policies on containers are unchanged.
+
+**Context**: Rome rebooted several times on 2026-09-30. Both units were user units under a lingering user manager, with `After=default.target` of that manager, which has no ordering relationship with the system `docker.service`.
+- **Shutdown never worked.** On the 09:03, 10:49 and 11:22 shutdowns, `safe_shutdown.sh` ran after Docker had stopped and failed with `dial unix /var/run/docker.sock: connect: no such file or directory` (`make: *** [Makefile:726: stop-all] Error 2`). dockerd stopped the containers itself instead, without the module-then-hub order.
+- **Two startup paths competed.** Containers dockerd stops during its own shutdown are not marked as stopped by the operator, so on the next boot dockerd restarts all of them at once according to their restart policies (59 `on-failure`, 7 `unless-stopped`). That boot's journal shows `Loading containers` from 11:23:23 to 11:24:05, with dependents such as portfolio-form-handler logged as `restarting container ... restartPolicy="{on-failure 0}"` because their databases were not up yet. The platform came up with boot deploy disabled, which is how the operator noticed.
+- **Boot deploy hung.** It started at 11:23:16, before dockerd had finished loading containers. Its first `docker info` accepted a connection and never returned. The script's `while ! docker info` loop had no timeout, so it stayed in Phase 1 until killed while the hub, which the operator had stopped by hand, stayed down. The same hang explains earlier boots where the unit looked stuck and was SIGTERM'd.
+
+**Rationale**:
+- **Ordering needs one systemd manager.** Units stop in reverse start order, but only within one manager. A system unit ordered `After=docker.service` is stopped before `docker.service`, so `ExecStop` has a working daemon. A user unit cannot be ordered against a system unit at all.
+- **A clean stop makes boot deploy the single startup authority.** Containers stopped by `docker compose stop` are recorded as stopped, so dockerd does not restore them. After a clean shutdown the only thing that starts services is the ordered, health-gated boot deploy.
+- **`Wants=`, not `Requires=` or `BindsTo=`.** With `Requires=`, restarting Docker during a package upgrade would propagate a stop to the shutdown unit and run a full platform stop, and would stop the boot-deploy unit too. Neither is wanted. Boot deploy already polls for Docker itself.
+- **Bounded probe.** A hung `docker info` is a transient condition during daemon start-up, and the loop was written to retry transient conditions. `timeout` turns a hang into a failed probe, and wall-clock elapsed time keeps `DOCKER_WAIT` honest when probes are slow.
+- **System scope also drops the linger dependency.** The user units only ran because the user manager was lingering.
+
+**Alternatives Considered**:
+- **Set every restart policy to `no`**: rejected. dockerd would never restore anything, but a container that crashes during normal operation would also stay down until someone noticed. `on-failure` is the right policy while running; the fix is to make shutdown clean.
+- **Disable boot deploy and let dockerd restore everything**: rejected. dockerd starts everything at once with no ordering or health gates, which is what ADR-024's ordering and the postgres-hub crash-recovery handling exist to prevent.
+- **Keep user units and add a polling wait in `safe_shutdown.sh`**: rejected. At shutdown the daemon is already gone; waiting cannot bring it back.
+
+**Consequences**:
+- Installing needs root: copy both files to `/etc/systemd/system/` with `User=` and the script path filled in, enable them, and remove the user units. The old safe-shutdown user unit must be disabled without `--now`, because stopping it runs its `ExecStop`.
+- `systemctl stop` or `restart` of `spoke-safe-shutdown.service` performs a full platform stop, like `make safe-shutdown`. `restart` does not bring the platform back; `make deploy-all` does.
+- After an unclean stop (power loss, kernel panic) the shutdown hook did not run, so dockerd restores containers and boot deploy runs too. `docker compose up -d` is idempotent and the two converge; ordering is lost for that one boot only.
+- Logs move from `journalctl --user` to the system journal: `journalctl -b -u spoke-boot-deploy` and, for the previous shutdown, `journalctl -b -1 -u spoke-safe-shutdown`.
+
+**Revisit When**:
+- A shutdown takes longer than `TimeoutStopSec=600`. systemd would then kill the script and Docker would stop the remainder, still gracefully but unordered.

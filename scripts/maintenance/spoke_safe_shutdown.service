@@ -1,42 +1,67 @@
 # ==============================================================================
 # SPOKE - SAFE SHUTDOWN SERVICE
 # ==============================================================================
-# Description: systemd user service — runs safe_shutdown.sh on session stop
+# Description: systemd system service — runs safe_shutdown.sh before Docker stops
 # Author: Matt Barham (with Claude Code assistance)
 # Created: 2026-06-30
-# Modified: 2026-06-30
-# Version: 1.0.0
+# Modified: 2026-09-30
+# Version: 2.0.0
 # Host: Your Server
 # ==============================================================================
 # Type: systemd unit (service)
 # Component: Spoke / shutdown orchestrator
 # ==============================================================================
 # Behavior: ExecStart is a no-op; RemainAfterExit keeps the unit "active" after
-#           boot so that on logout/reboot/poweroff systemd runs ExecStop, which
-#           gracefully stops all Spoke services (DB-safe). This runs while the
-#           user session — and therefore the Docker daemon — is still available.
+#           boot so that on reboot/poweroff systemd runs ExecStop. Because the
+#           unit is ordered After=docker.service, systemd stops it BEFORE
+#           docker.service at shutdown, so safe_shutdown.sh runs while the
+#           Docker daemon is still available (ADR-030). The pre-2.0 user unit
+#           had no ordering against the system docker.service and ran after
+#           the socket was already gone.
 #
-# Install (user scope):
-#   cp spoke_safe_shutdown.service ~/.config/systemd/user/
-#   # edit ExecStop= to the real script path
+#           Containers stopped here are recorded as stopped, so dockerd does
+#           not auto-restart them on the next boot and spoke-boot-deploy is the
+#           only thing that starts them, in order.
+#
+#           Wants= (not Requires=/BindsTo=) on docker.service: a Docker restart
+#           during a package upgrade must NOT trigger ExecStop and take the
+#           whole platform down.
+#
+# Install (system scope, replaces the pre-2.0 user unit):
+#   # Old user unit: disable WITHOUT --now. Stopping it runs its ExecStop,
+#   # i.e. a full platform stop. Left loaded, it just fails harmlessly at the
+#   # next shutdown (Docker is already gone by then) and is gone after reboot.
+#   systemctl --user disable spoke-safe-shutdown.service
+#   rm ~/.config/systemd/user/spoke-safe-shutdown.service
 #   systemctl --user daemon-reload
-#   systemctl --user enable --now spoke_safe_shutdown.service
+#   sudo cp spoke_safe_shutdown.service /etc/systemd/system/spoke-safe-shutdown.service
+#   # edit User= and ExecStop= below for this host
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now spoke-safe-shutdown.service     # start = no-op
+#
+# Note: `systemctl stop spoke-safe-shutdown` runs a full platform stop, the
+#       same as `make safe-shutdown`. `systemctl restart` stops the platform
+#       and does NOT bring it back; follow it with `make deploy-all`.
+#
+# Logs: journalctl -b -1 -u spoke-safe-shutdown   (previous boot's shutdown)
 # ==============================================================================
 
 [Unit]
 Description=Spoke Platform - Graceful Shutdown
 Documentation=https://github.com/captainzonks/spoke
-After=default.target
+Wants=docker.service
+After=docker.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+User=CHANGE_ME
 ExecStart=/bin/true
 ExecStop=/path/to/spoke/scripts/maintenance/safe_shutdown.sh
-TimeoutStopSec=300
+TimeoutStopSec=600
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=spoke-safe-shutdown
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

@@ -1,33 +1,53 @@
 # ==============================================================================
 # SPOKE - BOOT DEPLOY SERVICE
 # ==============================================================================
-# Description: systemd user service — runs boot_deploy.sh at login
+# Description: systemd system service — runs boot_deploy.sh once Docker is up
 # Author: Matt Barham
 # Created: 2026-03-23
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-09-30
+# Version: 2.0.0
 # Host: Your Server
 # ==============================================================================
 # Type: systemd unit (service)
 # Component: Spoke / boot orchestrator
 # ==============================================================================
+# Behavior: System unit ordered After=docker.service, so the ordered deploy
+#           starts only once the Docker daemon is up (ADR-030). It runs as the
+#           deploying user, whose membership in the docker group grants
+#           socket access. Wants= (not Requires=) on docker.service so a
+#           Docker restart (e.g. a package upgrade) does not stop or re-run
+#           this unit.
+#
+# Install (system scope, replaces the pre-2.0 user unit):
+#   systemctl --user disable --now spoke-boot-deploy.service   # old user unit
+#   rm ~/.config/systemd/user/spoke-boot-deploy.service
+#   sudo cp spoke_boot_deploy.service /etc/systemd/system/spoke-boot-deploy.service
+#   # edit User= and ExecStart= below for this host
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable spoke-boot-deploy.service            # runs next boot
+#
+# Logs: journalctl -b -u spoke-boot-deploy
+# ==============================================================================
 
 [Unit]
 Description=Spoke Platform - Ordered Boot Deployment
 Documentation=https://github.com/captainzonks/spoke
-
-# default.target ensures user session is ready; Docker should be running by then
-# The boot script polls for Docker readiness as a safety net
-After=default.target
+Wants=docker.service network-online.target
+After=docker.service network-online.target local-fs.target
+StartLimitIntervalSec=1800
+StartLimitBurst=3
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+User=CHANGE_ME
 ExecStart=/path/to/spoke/scripts/maintenance/boot_deploy.sh
-TimeoutStartSec=600
+TimeoutStartSec=1800
+Restart=on-failure
+RestartSec=30
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=spoke-boot-deploy
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

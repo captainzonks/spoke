@@ -5,8 +5,8 @@
 # Description: Graceful ordered stop of all Spoke services for reboot/shutdown
 # Author: Matt Barham (with Claude Code assistance)
 # Created: 2026-06-30
-# Modified: 2026-06-30
-# Version: 1.0.0
+# Modified: 2026-09-30
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -18,10 +18,12 @@
 #          A clean stop avoids PostgreSQL crash recovery (full data-dir fsync +
 #          WAL replay) on the next boot.
 #
-# Note: For OS reboot/poweroff, Docker's daemon already stops containers
-#       gracefully honoring stop_grace_period, so this script is primarily for
-#       MANUAL graceful shutdown (e.g. before maintenance) or as a systemd
-#       ExecStop hook. It is safe to run repeatedly (idempotent).
+# Note: Runs on every reboot/poweroff as the ExecStop of the
+#       spoke-safe-shutdown system unit, which is ordered After=docker.service
+#       so this script runs before the Docker daemon stops (ADR-030). A stop
+#       done here also marks containers as stopped, so dockerd does not
+#       auto-restart them at the next boot. Also usable manually
+#       (`make safe-shutdown`). Safe to run repeatedly (idempotent).
 #
 # Usage:
 #   ./safe_shutdown.sh            # Stop all modules, then hub

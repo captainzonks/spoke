@@ -7,8 +7,8 @@ architecture.md - Spoke architecture reference
 Description: Complete Spoke architecture reference (living document)
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-09-26
-Version: 1.2.0
+Modified: 2026-09-30
+Version: 1.3.0
 ==============================================================================
 Document Type: Reference
 Audience: Developer, AI Assistant
@@ -193,6 +193,17 @@ The full module deployment pipeline (`make deploy MODULE=name`) runs these steps
 The known edge is `monitoring` → `database`: Loki and Prometheus store chunks in MinIO, Telegraf writes to InfluxDB3, and Grafana reads VictoriaMetrics. Listing `monitoring` first leaves Loki retrying a dead S3 endpoint until `database` comes up.
 
 A module can set `boot_deploy: false` to be skipped during `boot_deploy.sh`. This is for batch jobs whose own systemd timer owns their schedule, where a deploy at boot just burns a cycle; it is not a way to defer a slow service. An absent key means true, and skipped modules are logged by name. See ADR-024.
+
+## Boot and Shutdown Orchestration
+
+Two systemd **system** units own the platform lifecycle, both ordered `After=docker.service` (ADR-030):
+
+- `spoke-safe-shutdown.service` (`scripts/maintenance/spoke_safe_shutdown.service`) has a no-op `ExecStart` and runs `safe_shutdown.sh` as its `ExecStop`. systemd stops units in reverse start order, so at reboot or poweroff this runs **before** Docker stops: modules first, then the hub, each honouring its `stop_grace_period`, and postgres-hub checkpoints cleanly.
+- `spoke-boot-deploy.service` (`scripts/maintenance/spoke_boot_deploy.service`) runs `boot_deploy.sh` once Docker is up: hub, then health gates (postgres-hub, crowdsec, traefik, redis, authentik), then modules in `modules.yml` order.
+
+Because the shutdown hook stops every container explicitly, dockerd has nothing to auto-restart at the next boot, and boot deploy is the only thing that starts services. After a crash or power loss the hook never ran, so dockerd restores whatever was running (all at once, per each container's restart policy) and boot deploy runs as well; `docker compose up -d` is idempotent, so the overlap converges.
+
+Both units use `Wants=docker.service`, not `Requires=`, so restarting Docker (for example during a package upgrade) neither stops the platform through `ExecStop` nor re-runs boot deploy.
 
 ## Related Documents
 

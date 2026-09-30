@@ -5,16 +5,17 @@
 # Description: Ordered Spoke deployment on cold boot
 # Author: Matt Barham
 # Created: 2026-03-11
-# Modified: 2026-09-26
-# Version: 2.1.0
+# Modified: 2026-09-30
+# Version: 2.2.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
-# Component: Spoke / boot orchestrator (systemd user service)
+# Component: Spoke / boot orchestrator (systemd system service)
 # ==============================================================================
 # Purpose: Wait for Docker daemon readiness, deploy hub services, wait for
-#          critical hub health, then deploy modules. Designed to run as a
-#          systemd user service on boot.
+#          critical hub health, then deploy modules. Runs as a systemd system
+#          service ordered After=docker.service (see spoke_boot_deploy.service
+#          and ADR-030).
 #
 # Boot timeline:
 #   1. Wait for Docker daemon
@@ -37,6 +38,7 @@ IFS=$'\n\t'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPOKE_DIR="${SPOKE_DIR:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
 DOCKER_WAIT=120
+DOCKER_PROBE_TIMEOUT=10
 HUB_HEALTH_WAIT=600
 POLL_INTERVAL=5
 LOG_TAG="spoke-boot-deploy"
@@ -94,17 +96,21 @@ log "Spoke boot deploy starting (SPOKE_DIR=${SPOKE_DIR})"
 # ==============================================================================
 # PHASE 1: Wait for Docker daemon
 # ==============================================================================
-elapsed=0
-while ! docker info >/dev/null 2>&1; do
+# Each probe is bounded: a `docker info` issued while dockerd is still loading
+# containers can accept the connection and never answer, which previously
+# stalled the whole boot deploy indefinitely. Elapsed time is wall-clock
+# (SECONDS), so a slow probe counts against DOCKER_WAIT too.
+docker_wait_start=$SECONDS
+while ! timeout -k 2 "$DOCKER_PROBE_TIMEOUT" docker info >/dev/null 2>&1; do
+    elapsed=$((SECONDS - docker_wait_start))
     if [[ $elapsed -ge $DOCKER_WAIT ]]; then
         log "ERROR: Docker daemon not ready after ${DOCKER_WAIT}s"
         exit 1
     fi
     log "Waiting for Docker daemon... (${elapsed}s/${DOCKER_WAIT}s)"
-    sleep $POLL_INTERVAL
-    elapsed=$((elapsed + POLL_INTERVAL))
+    sleep "$POLL_INTERVAL"
 done
-log "Docker daemon ready after ${elapsed}s"
+log "Docker daemon ready after $((SECONDS - docker_wait_start))s"
 
 # ==============================================================================
 # PHASE 2: Deploy hub services

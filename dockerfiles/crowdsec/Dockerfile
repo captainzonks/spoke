@@ -4,17 +4,17 @@
 # Description: Custom CrowdSec build with non-root user configuration
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-07-03
-# Version: 1.7.8-custom
+# Modified: 2026-10-02
+# Version: 1.8.1-custom
 # Host: Your Server
 # ==============================================================================
 # Type: Dockerfile
-# Base Image: crowdsecurity/crowdsec:v1.7.8
+# Base Image: crowdsecurity/crowdsec:v1.8.1
 # Component: spoke hub / service: crowdsec
 # Security: non-root user, proper plugin permissions
 # ==============================================================================
 
-FROM crowdsecurity/crowdsec:v1.7.8
+FROM crowdsecurity/crowdsec:v1.8.1
 
 ARG USER_ID
 ARG GROUP_ID

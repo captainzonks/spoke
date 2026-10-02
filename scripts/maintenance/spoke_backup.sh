@@ -5,8 +5,8 @@
 # Description: Backup critical Spoke configuration to a local restic repository
 # Author: Matt Barham
 # Created: 2026-04-06
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-10-02
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -19,7 +19,9 @@
 #     - secrets/              Docker secrets
 #     - shared/env/           Environment files (base.env, hub.env)
 #     - modules.yml           Module registry and site-specific config
+#     - hub/docker-compose.override.yml       Site-specific hub compose override
 #     - modules/*/docker-compose.override.yml  Site-specific compose overrides
+#     - hub/backup.conf, modules/*/backup.conf The path lists themselves
 #   Hub extras (from hub/backup.conf):
 #     - appdata/traefik/rules/     Dynamic routing rules
 #     - appdata/crowdsec/config/   CrowdSec custom config
@@ -187,6 +189,11 @@ for core_path in \
 done
 
 # --- Auto-discover docker-compose.override.yml files ---
+# Hub and module overrides are gitignored deployment data: back them up.
+
+if [[ -f "${SPOKE_DIR}/hub/docker-compose.override.yml" ]]; then
+    BACKUP_PATHS+=("${SPOKE_DIR}/hub/docker-compose.override.yml")
+fi
 
 while IFS= read -r -d '' override_file; do
     BACKUP_PATHS+=("${override_file}")
@@ -197,6 +204,7 @@ done < <(find "${SPOKE_DIR}/modules" -maxdepth 2 -name "docker-compose.override.
 HUB_CONF="${SPOKE_DIR}/hub/backup.conf"
 if [[ -f "${HUB_CONF}" ]]; then
     log "Loading hub backup config: ${HUB_CONF}"
+    BACKUP_PATHS+=("${HUB_CONF}")
     load_conf "${HUB_CONF}"
 fi
 
@@ -205,6 +213,7 @@ fi
 while IFS= read -r -d '' module_conf; do
     module_name="$(basename "$(dirname "${module_conf}")")"
     log "Loading module backup config: ${module_name}"
+    BACKUP_PATHS+=("${module_conf}")
     load_conf "${module_conf}"
 done < <(find "${SPOKE_DIR}/modules" -maxdepth 2 -name "backup.conf" -print0 2>/dev/null | sort -z)
 

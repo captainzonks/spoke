@@ -5,8 +5,8 @@
 # Description: Graceful ordered stop of all Spoke services for reboot/shutdown
 # Author: Matt Barham (with Claude Code assistance)
 # Created: 2026-06-30
-# Modified: 2026-09-30
-# Version: 1.1.0
+# Modified: 2026-10-15
+# Version: 1.2.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -25,6 +25,13 @@
 #       auto-restart them at the next boot. Also usable manually
 #       (`make safe-shutdown`). Safe to run repeatedly (idempotent).
 #
+# Post-stop hooks: after everything is stopped, every executable file in
+#       ${SPOKE_DIR}/scripts/local/shutdown_post.d/ runs in name order (site
+#       scripts, e.g. cycle a UPS output). A hook may start a container again
+#       for one last command. Hooks are bounded by HOOK_TIMEOUT and a failing
+#       hook is logged, never fatal. The directory is optional and gitignored
+#       with the rest of scripts/local/.
+#
 # Usage:
 #   ./safe_shutdown.sh            # Stop all modules, then hub
 #   make safe-shutdown            # Same, via Makefile
@@ -37,6 +44,8 @@ IFS=$'\n\t'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPOKE_DIR="${SPOKE_DIR:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
 PG_STOP_TIMEOUT=90
+HOOK_DIR="${SPOKE_DIR}/scripts/local/shutdown_post.d"
+HOOK_TIMEOUT=60
 LOG_TAG="spoke-safe-shutdown"
 
 log() {
@@ -73,6 +82,21 @@ if docker inspect postgres-hub >/dev/null 2>&1; then
     else
         log "postgres-hub already stopped"
     fi
+fi
+
+# ==============================================================================
+# PHASE 3: Site post-stop hooks (optional)
+# ==============================================================================
+if [[ -d "$HOOK_DIR" ]]; then
+    for hook in "$HOOK_DIR"/*; do
+        [[ -f "$hook" && -x "$hook" ]] || continue
+        log "running post-stop hook: $(basename "$hook")"
+        if timeout -k 5 "$HOOK_TIMEOUT" "$hook" 2>&1; then
+            log "hook finished: $(basename "$hook")"
+        else
+            log "WARNING: hook failed or timed out (${HOOK_TIMEOUT}s): $(basename "$hook")"
+        fi
+    done
 fi
 
 log "Spoke safe shutdown complete"

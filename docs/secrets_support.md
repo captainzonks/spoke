@@ -451,7 +451,7 @@ loki.write "default" {
 #### Plex (LinuxServer.io)
 **Support**: Native
 **Format**: `FILE__VAR=/path/to/secret` (prefix pattern)
-**Image**: `lscr.io/linuxserver/plex:1.43.5.11029-6bf8af3f0-ls329`
+**Image**: `lscr.io/linuxserver/plex:1.43.5.11079-b3b13e506-ls330`
 
 LinuxServer.io images use prefix pattern with double underscore.
 

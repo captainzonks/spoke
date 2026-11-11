@@ -121,7 +121,7 @@ secrets:
 #### CrowdSec
 **Support**: Custom (Spoke Implementation)
 **Format**: `VAR_FILE=/run/secrets/secret_name`
-**Image**: `rome/crowdsec:v1.7.8-custom`
+**Image**: `rome/crowdsec:v1.8.2-custom`
 
 Spoke's custom build adds `_FILE` support via entrypoint preprocessing.
 

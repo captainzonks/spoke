@@ -5,11 +5,11 @@
 # Author: Matt Barham
 # Created: 2026-02-12
 # Modified: 2026-10-26
-# Version: 3.7.16-custom
+# Version: 3.7.19-custom
 # Host: Your Server
 # ==============================================================================
 # Type: Dockerfile
-# Base Image: traefik:v3.7.16
+# Base Image: traefik:v3.7.19
 # Component: spoke hub / service: traefik
 # Security: non-root user execution, plugin readiness validation
 # ==============================================================================
@@ -19,7 +19,7 @@
 #   - curl, netcat-openbsd: for connectivity checks
 # ==============================================================================
 
-FROM traefik:v3.7.16
+FROM traefik:v3.7.19
 
 ARG USER_ID
 ARG GROUP_ID

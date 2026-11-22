@@ -854,7 +854,7 @@ services:
   #======================================
   sablier:
     <<: [*ssl, *log_small]
-    image: sablierapp/sablier:1.18.0
+    image: sablierapp/sablier:1.21.1
     hostname: sablier
     container_name: sablier
     restart: on-failure

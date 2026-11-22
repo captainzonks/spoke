@@ -5,16 +5,16 @@
 # Author: Matt Barham
 # Created: 2026-02-12
 # Modified: 2026-09-04
-# Version: 18.6-custom
+# Version: 18.7-custom
 # Host: Your Server
 # ==============================================================================
 # Type: Dockerfile
-# Base Image: postgres:18.6
+# Base Image: postgres:18.7
 # Component: spoke hub / service: postgres-hub
 # Security: custom user mapping (remaps from default 999:999)
 # ==============================================================================
 
-FROM postgres:18.6
+FROM postgres:18.7
 
 ARG USER_ID
 ARG GROUP_ID

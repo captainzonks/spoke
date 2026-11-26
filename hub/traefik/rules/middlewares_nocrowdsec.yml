@@ -4,8 +4,8 @@
 # Description: Middleware chains without CrowdSec — used when CROWDSEC_ENABLED=false
 # Author: Matt Barham
 # Created: 2026-03-15
-# Modified: 2026-09-25
-# Version: 1.0.3
+# Modified: 2026-11-26
+# Version: 1.0.4
 # Host: Your Server
 # ==============================================================================
 # Type: Traefik Dynamic Config (middlewares)
@@ -199,10 +199,11 @@ http:
 
     #==================== CORS CONFIGURATIONS ============
 
+    # No allowed origins on purpose: Traefik answers preflights without
+    # Access-Control-Allow-Origin. Never allow "null" with credentials; any
+    # sandboxed page can send that origin.
     authentik-cors:
       headers:
-        accessControlAllowOriginList:
-          - "null"
         accessControlAllowMethods:
           - GET
           - POST

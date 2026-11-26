@@ -5,7 +5,7 @@
 # Author: Matt Barham
 # Created: 2026-02-12
 # Modified: 2026-11-26
-# Version: 1.1.0
+# Version: 1.2.0
 # Host: Your Server
 # ==============================================================================
 # Type: Traefik Dynamic Config (middlewares)
@@ -44,6 +44,15 @@ http:
           - real-ip
           - crowdsec
           - authentik
+
+    chain-authentik-keep-authorization:
+      chain:
+        middlewares:
+          - rate-limit
+          - secure-headers
+          - real-ip
+          - crowdsec
+          - authentik-keep-authorization
 
     chain-admin-strict:
       chain:
@@ -189,6 +198,30 @@ http:
           - X-authentik-meta-app
           - X-authentik-meta-version
           - Authorization
+        authResponseHeadersRegex: "^X-authentik-.*$"
+
+    # Same as authentik, but the client's Authorization header reaches the
+    # backend. For apps with their own HTTP Basic or token login behind
+    # Authentik. Turn off "Intercept header authentication" on the app's
+    # Authentik provider, so Authentik ignores that header.
+    authentik-keep-authorization:
+      forwardAuth:
+        address: "http://authentik:9000/outpost.goauthentik.io/auth/traefik"
+        trustForwardHeader: true
+        maxResponseBodySize: 1048576
+        authResponseHeaders:
+          - X-authentik-username
+          - X-authentik-groups
+          - X-authentik-entitlements
+          - X-authentik-email
+          - X-authentik-name
+          - X-authentik-uid
+          - X-authentik-jwt
+          - X-authentik-meta-jwks
+          - X-authentik-meta-outpost
+          - X-authentik-meta-provider
+          - X-authentik-meta-app
+          - X-authentik-meta-version
         authResponseHeadersRegex: "^X-authentik-.*$"
 
     authentik-server-headers:

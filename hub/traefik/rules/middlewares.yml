@@ -4,8 +4,8 @@
 # Description: Reusable middleware chains and components for the Spoke platform
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-11-25
-# Version: 1.0.4
+# Modified: 2026-11-26
+# Version: 1.0.5
 # Host: Your Server
 # ==============================================================================
 # Type: Traefik Dynamic Config (middlewares)
@@ -132,7 +132,8 @@ http:
           - authentik-cors
           - authentik-server-headers
           - real-ip
-          # No crowdsec or authentik - this is the auth provider itself
+          - crowdsec
+          # No authentik forward auth - this is the auth provider itself
 
     #======================================================
     #==================== MIDDLEWARE COMPONENTS ==========
@@ -209,10 +210,11 @@ http:
 
     #==================== CORS CONFIGURATIONS ============
 
+    # No allowed origins on purpose: Traefik answers preflights without
+    # Access-Control-Allow-Origin. Never allow "null" with credentials; any
+    # sandboxed page can send that origin.
     authentik-cors:
       headers:
-        accessControlAllowOriginList:
-          - "null"
         accessControlAllowMethods:
           - GET
           - POST

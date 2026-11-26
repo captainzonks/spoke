@@ -4,8 +4,8 @@
 # Description: Core hub services - proxy, auth, security, database, cache
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-11-25
-# Version: 1.0.7
+# Modified: 2026-11-26
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Component: spoke hub
@@ -571,6 +571,9 @@ services:
       ### GLOBAL
       - --global.checkNewVersion=true
       - --global.sendAnonymousUsage=false
+      # Drop request headers whose names can alias another (X_Auth_User for
+      # X-Auth-User): any character other than letters, digits and dashes.
+      - --global.aliasHeadersStrategy=delete
 
       ### ENTRYPOINTS
       - --entryPoints.web.address=:80

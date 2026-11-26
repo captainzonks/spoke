@@ -8,7 +8,7 @@ Description: Notable changes in each release, newest first
 Author: Matt Barham
 Created: 2026-09-27
 Modified: 2026-11-26
-Version: 1.2.1
+Version: 1.3.0
 ==============================================================================
 Document Type: Changelog
 Audience: Operator, Module Developer
@@ -21,6 +21,12 @@ All notable changes to this project are documented here. The format follows
 follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). What
 counts as a breaking change for a Spoke module is defined in the Spoke hub's
 ADR-029.
+
+## [1.3.0] - 2026-11-26
+
+### Added
+
+- Add a forward-auth chain that keeps the client Authorization header (#76)
 
 ## [1.2.1] - 2026-11-26
 

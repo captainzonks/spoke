@@ -2,11 +2,12 @@
 # ==============================================================================
 # SPOKE - DEPLOY HUB RULES
 # ==============================================================================
-# Description: Copies hub/traefik/rules/ to appdata/traefik/rules/ with hub_ prefix
+# Description: Copies hub/traefik/rules/ (rules and pages) to appdata/traefik/rules/
+#              with hub_ prefix
 # Author: Matt Barham
 # Created: 2026-02-12
-# Modified: 2026-04-22
-# Version: 1.0.1
+# Modified: 2026-11-26
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Shell Script (Bash)
@@ -42,6 +43,15 @@ fi
 if [ "${CROWDSEC_ENABLED}" = "false" ]; then
     printf "${YELLOW}  CROWDSEC_ENABLED=false — deploying no-CrowdSec middleware variant${NC}\n"
 fi
+
+# Pages go first: a bouncer middleware that names a missing banFilePath fails
+# to load, which takes down every router that uses it.
+for page in "${HUB_RULES_DIR}"/*.html; do
+    [[ -f "${page}" ]] || continue
+    filename=$(basename "${page}")
+    cp "${page}" "${RULES_DIR}/hub_${filename}"
+    printf "${GREEN}  Deployed: %s -> %s${NC}\n" "${filename}" "hub_${filename}"
+done
 
 rule_count=0
 for rule_file in "${HUB_RULES_DIR}"/*.yml; do

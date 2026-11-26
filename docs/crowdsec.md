@@ -7,8 +7,8 @@ crowdsec.md - CrowdSec integration reference
 Description: How CrowdSec integrates with Spoke (behavioral analysis, AppSec WAF)
 Author: Matt Barham
 Created: 2026-02-12
-Modified: 2026-04-22
-Version: 1.0.1
+Modified: 2026-11-26
+Version: 1.1.0
 ==============================================================================
 Document Type: Reference
 Audience: Developer
@@ -62,6 +62,20 @@ include the `crowdsec` middleware. The `chain-upload` chain uses `crowdsec-uploa
 **Startup ordering**: When `CROWDSEC_ENABLED=true`, the `docker-compose.crowdsec.yml`
 overlay adds `depends_on: crowdsec` to Traefik. The custom Traefik entrypoint also
 waits for the CrowdSec LAPI health endpoint before starting.
+
+---
+
+## Ban Page
+
+Blocked visitors see `hub/traefik/rules/ban.html`. The `crowdsec` and
+`crowdsec-upload` middlewares name it in `banFilePath`, and it covers both bans
+and AppSec blocks. It is a Go text template; `{{ .ClientIP }}` is the blocked
+address.
+
+- `deploy_hub_rules.sh` copies it to `appdata/traefik/rules/hub_ban.html` before
+  the rules. A middleware that names a missing file does not load.
+- Traefik reads the page when it builds the middleware. After editing only the
+  page, restart Traefik.
 
 ---
 

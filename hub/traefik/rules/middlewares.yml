@@ -5,7 +5,7 @@
 # Author: Matt Barham
 # Created: 2026-02-12
 # Modified: 2026-11-26
-# Version: 1.0.5
+# Version: 1.1.0
 # Host: Your Server
 # ==============================================================================
 # Type: Traefik Dynamic Config (middlewares)
@@ -333,6 +333,7 @@ http:
           updateMaxFailure: 0
           defaultDecisionSeconds: 60
           remediationStatusCode: 403
+          banFilePath: /etc/traefik/rules/hub_ban.html
           httpTimeoutSeconds: 10
           clientMaxBodySize: 1048576
           crowdsecMode: live
@@ -391,6 +392,7 @@ http:
           updateMaxFailure: 0
           defaultDecisionSeconds: 60
           remediationStatusCode: 403
+          banFilePath: /etc/traefik/rules/hub_ban.html
           httpTimeoutSeconds: 10
           clientMaxBodySize: 1048576
           crowdsecMode: live
